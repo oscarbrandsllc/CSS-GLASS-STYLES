@@ -22,6 +22,8 @@
   .stars3{width:3px;height:3px; box-shadow: var(--shadows-big); animation: animStar 150s linear infinite;}
   .stars3:after{content:""; top:2000px; box-shadow: var(--shadows-big);}
   @keyframes animStar{from{transform:translateY(0)}to{transform:translateY(-2000px)}}
+  @keyframes aurora{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+  @keyframes blob-move { 0% { transform: translate(0, 0); } 25% { transform: translate(60px, -20px) scale(1.1); } 50% { transform: translate(30px, 70px) scale(0.9); } 75% { transform: translate(-40px, 40px) scale(1.2); } 100% { transform: translate(0, 0); } }
 
   header{
     position: sticky; top:0; z-index:5;
@@ -107,6 +109,7 @@ function writeBaseCSS(p, out){
   if(cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)') emit(out, `background-color: ${cs.backgroundColor};`);
   if(cs.webkitBackdropFilter) emit(out, `-webkit-backdrop-filter: ${cs.webkitBackdropFilter};`);
   if(cs.backdropFilter) emit(out, `backdrop-filter: ${cs.backdropFilter};`);
+  if(cs.filter && cs.filter !== 'none') emit(out, `filter: ${cs.filter};`);
   if(cs.borderTopStyle !== 'none' && cs.borderTopWidth !== '0px'){
     emit(out, `border: ${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor};`);
   }
@@ -201,21 +204,57 @@ CARDS.push({
   buildCSS: buildSimpleCSS
 });
 
-/* === 3 Dimmed === */
+/* === 3 Aurora Glass (NEW) === */
 CARDS.push({
-  id:'dim', title:'Dimmed Glass', key:'blur + brightness↓',
+  id:'aurora', title:'Aurora Glass', key:'blurred animated gradient',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.26)'; p._more='brightness(0.90)';
-    setBlurSat(p,14,115, p._more);
-    p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
-    p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
+    p.style.backgroundColor = 'rgba(10, 20, 35, 0.25)';
+    p.style.border = '1px solid rgba(255,255,255,.1)';
+    const fx = el('div');
+    fx.className = 'auroraFx';
+    p._h1 = 200; p._h2 = 250; p._h3 = 300; p._speed = 15; p._angle = 135; p._blur = 40;
+    Object.assign(fx.style, {
+      position: 'absolute', inset: '0', pointerEvents: 'none', borderRadius: 'inherit', overflow: 'hidden',
+      background: `linear-gradient(${p._angle}deg, hsl(${p._h1}, 70%, 60%), hsl(${p._h2}, 70%, 60%), hsl(${p._h3}, 70%, 60%))`,
+      backgroundSize: '200% 200%',
+      animation: `aurora ${p._speed}s ease infinite`,
+      filter: `blur(${p._blur}px)`,
+      transform: 'scale(1.2)'
+    });
+    p.appendChild(fx);
+    p._paint = () => {
+      fx.style.background = `linear-gradient(${p._angle}deg, hsl(${p._h1}, 70%, 60%), hsl(${p._h2}, 70%, 60%), hsl(${p._h3}, 70%, 60%))`;
+      fx.style.filter = `blur(${p._blur}px)`;
+      fx.style.animationDuration = `${p._speed}s`;
+    };
   },
-  sliders:[
-    bgAlphaSlider(.26), ...baseBlurSat(14,115),
-    slider('Brightness %',60,120,1,90,'%',(p,v)=>{ p._more=`brightness(${v/100})`; setBlurSat(p, p._blur??14, p._sat??115, p._more); }),
-    borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22)
+  sliders: [
+    bgAlphaSlider(0.25),
+    slider('Blur', 10, 80, 1, 40, 'px', (p, v) => { p._blur = v; p._paint(); }),
+    slider('Speed', 5, 30, 1, 15, 's', (p, v) => { p._speed = v; p._paint(); }),
+    slider('Angle', 0, 360, 1, 135, '°', (p,v)=>{ p._angle = v; p._paint(); }),
+    slider('Hue 1', 0, 360, 1, 200, '°', (p,v)=>{ p._h1 = v; p._paint(); }),
+    slider('Hue 2', 0, 360, 1, 250, '°', (p,v)=>{ p._h2 = v; p._paint(); }),
+    slider('Hue 3', 0, 360, 1, 300, '°', (p,v)=>{ p._h3 = v; p._paint(); }),
+    borderWidthSlider(1),
+    borderAlphaSlider(0.1)
   ],
-  buildCSS: buildSimpleCSS
+  buildCSS(p){
+      const keyframes = [`@keyframes aurora {`,`  0% { background-position: 0% 50%; }`,`  50% { background-position: 100% 50%; }`,`  100% { background-position: 0% 50%; }`,`}`];
+      const s = getComputedStyle(p.querySelector('.auroraFx'));
+      const pseudoCss = [
+        'content: ""','position: absolute','inset: 0','pointer-events: none','border-radius: inherit',
+        `background: ${s.backgroundImage}`,`background-size: 200% 200%`,`animation: aurora ${p._speed}s ease infinite`,
+        `filter: blur(${p._blur}px)`,`transform: scale(1.2)`
+      ];
+      const mainStyle = getComputedStyle(p);
+      const mainCss = [
+        `position: relative;`,`overflow: hidden;`,`background-color: ${mainStyle.backgroundColor};`,
+        `border: ${mainStyle.borderTopWidth} ${mainStyle.borderTopStyle} ${mainStyle.borderTopColor};`,`border-radius: 10px;`
+      ];
+      const finalCss = [ ...keyframes,``,`.your-selector {`,...mainCss.map(line => `  ${line}`),`}`,``,`.your-selector::before {`,...pseudoCss.map(line => `  ${line}`),`}`];
+      return finalCss.join('\n');
+  }
 });
 
 /* === 4 Acrylic === */
@@ -260,15 +299,23 @@ CARDS.push({
     p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.10)'; setBlurSat(p,10,120);
     p._inset=''; p._oblur=30; p._oalpha=.20; rebuildShadow(p);
     p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
-    const fx=el('div'); fx.className='paperFx'; Object.assign(fx.style,{
+    const fx=el('div'); fx.className='paperFx';
+    p._whiteGrainA = .03; p._blackGrainA = .06;
+    p._paint = () => {
+        fx.style.backgroundImage=`radial-gradient(rgba(255,255,255,${p._whiteGrainA}) 1px, transparent 1px), radial-gradient(rgba(0,0,0,${p._blackGrainA}) 1px, transparent 1px)`;
+    };
+    Object.assign(fx.style,{
       position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
-      backgroundImage:'radial-gradient(rgba(255,255,255,.03) 1px, transparent 1px), radial-gradient(rgba(0,0,0,.06) 1px, transparent 1px)',
       backgroundSize:'1px 1px, 2px 2px',opacity:'0.7'
-    }); p.appendChild(fx);
+    });
+    p.appendChild(fx);
+    p._paint();
   },
   sliders:[
     bgAlphaSlider(.10), ...baseBlurSat(10,120),
     slider('Grain opacity',0,1,.01,.7,'',(p,v)=>{ p.querySelector('.paperFx').style.opacity=String(v); }),
+    slider('White grain α',0,.2,.01,.03,'',(p,v)=>{ p._whiteGrainA=v; p._paint(); }),
+    slider('Black grain α',0,.2,.01,.06,'',(p,v)=>{ p._blackGrainA=v; p._paint(); }),
     slider('Grain size px',1,8,1,1,'px',(p,v)=>{ p.querySelector('.paperFx').style.backgroundSize=`${v}px ${v}px, ${v*2}px ${v*2}px`; }),
     borderWidthSlider(1), borderAlphaSlider(.10), ...outerShadowSliders(30,.20)
   ],
@@ -276,14 +323,8 @@ CARDS.push({
     return buildOverlayCSS(p, 'after', (p) => {
       const s = getComputedStyle(p.querySelector('.paperFx'));
       return [
-        'content: ""',
-        'position: absolute',
-        'inset: 0',
-        'pointer-events: none',
-        'border-radius: inherit',
-        `opacity: ${s.opacity}`,
-        `background-image: ${s.backgroundImage}`,
-        `background-size: ${s.backgroundSize}`
+        'content: ""', 'position: absolute', 'inset: 0', 'pointer-events: none', 'border-radius: inherit',
+        `opacity: ${s.opacity}`, `background-image: ${s.backgroundImage}`, `background-size: ${s.backgroundSize}`
       ];
     });
   }
@@ -297,14 +338,19 @@ CARDS.push({
     p._inset=''; p._oblur=30; p._oalpha=.22; rebuildShadow(p);
     p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
     const fx=el('div'); fx.className='glossFx'; p.appendChild(fx);
-    function paint(){ Object.assign(fx.style,{
-      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
-      background:`linear-gradient(${p._sheenAngle}deg, rgba(255,255,255,${p._sheenA}), rgba(255,255,255,0) ${p._sheenStop}%)`
-    }); }
-    p._sheenAngle=180; p._sheenStop=35; p._sheenA=.18; p._paint=paint; paint();
+    p._sheenH = 0; p._sheenS = 0;
+    p._paint = () => {
+        Object.assign(fx.style,{
+          position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
+          background:`linear-gradient(${p._sheenAngle}deg, hsla(${p._sheenH},${p._sheenS}%,100%,${p._sheenA}), transparent ${p._sheenStop}%)`
+        });
+    };
+    p._sheenAngle=180; p._sheenStop=35; p._sheenA=.18; p._paint();
   },
   sliders:[
     bgAlphaSlider(.12), ...baseBlurSat(12,120),
+    slider('Sheen hue',0,360,1,0,'°',(p,v)=>{ p._sheenH=v; p._paint(); }),
+    slider('Sheen sat',0,100,1,0,'%',(p,v)=>{ p._sheenS=v; p._paint(); }),
     slider('Sheen α',0,.6,.01,.18,'',(p,v)=>{ p._sheenA=v; p._paint(); }),
     slider('Sheen stop %',10,80,1,35,'%',(p,v)=>{ p._sheenStop=v; p._paint(); }),
     slider('Sheen angle °',0,360,1,180,'deg',(p,v)=>{ p._sheenAngle=v; p._paint(); }),
@@ -314,11 +360,7 @@ CARDS.push({
     return buildOverlayCSS(p, 'before', (p) => {
       const s = getComputedStyle(p.querySelector('.glossFx'));
       return [
-        'content: ""',
-        'position: absolute',
-        'inset: 0',
-        'pointer-events: none',
-        'border-radius: inherit',
+        'content: ""', 'position: absolute', 'inset: 0', 'pointer-events: none', 'border-radius: inherit',
         `background: ${s.backgroundImage || s.background}`
       ];
     });
@@ -348,36 +390,70 @@ CARDS.push({
 CARDS.push({
   id:'frost', title:'Heavy Frost', key:'white frost',
   setup(p){
-    p._fA=.16; p.style.backgroundColor=`rgba(255,255,255,${p._fA})`; setBlurSat(p,14,120);
+    p._fA=.16; p._h=0; p._s=0;
+    p._paint = () => {
+        p.style.backgroundColor=`hsla(${p._h},${p._s}%,100%,${p._fA})`;
+    };
+    p._paint();
+    setBlurSat(p,14,120);
     p._inset=''; p._oblur=32; p._oalpha=.22; rebuildShadow(p);
     p._bw=1; p._ba=.22; p.style.border='1px solid rgba(255,255,255,.22)';
   },
   sliders:[
     ...baseBlurSat(14,120),
-    slider('Frost α',0,.6,.01,.16,'',(p,v)=>{ p._fA=v; p.style.backgroundColor=`rgba(255,255,255,${p._fA})`; }),
+    slider('Frost hue',0,360,1,0,'°',(p,v)=>{ p._h=v; p._paint(); }),
+    slider('Frost sat',0,100,1,0,'%',(p,v)=>{ p._s=v; p._paint(); }),
+    slider('Frost α',0,.6,.01,.16,'',(p,v)=>{ p._fA=v; p._paint(); }),
     borderWidthSlider(1), borderAlphaSlider(.22), ...outerShadowSliders(32,.22)
   ],
   buildCSS: buildSimpleCSS
 });
 
-/* === 9 Inset Bevel === */
+/* === 9 Warped Time (NEW) === */
 CARDS.push({
-  id:'bevel', title:'Inset Bevel (4‑side)', key:'bevel px · light α · dark α',
+  id:'warped-time', title:'Warped Time', key:'SVG filter · distortion',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.16)'; setBlurSat(p,12,118);
-    p._px=2; p._la=.35; p._da=.30;
-    p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`;
-    p._oblur=24; p._oalpha=.22; rebuildShadow(p);
-    p._bw=1; p._ba=.18; p.style.border='1px solid rgba(255,255,255,.18)';
+    p.style.filter = 'url(#warp-filter)';
+    p._baseFreqX = 0.01; p._baseFreqY = 0.04; p._numOctaves = 3; p._scale = 20;
+    const turbulence = document.querySelector('#warp-filter feTurbulence');
+    const displacement = document.querySelector('#warp-filter feDisplacementMap');
+    p._updateFilter = () => {
+      turbulence.setAttribute('baseFrequency', `${p._baseFreqX} ${p._baseFreqY}`);
+      turbulence.setAttribute('numOctaves', p._numOctaves);
+      displacement.setAttribute('scale', p._scale);
+    };
+    p._updateFilter();
+    p.style.backgroundColor = 'rgba(0, 5, 15, 0.1)';
+    p.style.border = '1px solid rgba(255,255,255,.08)';
   },
   sliders:[
-    bgAlphaSlider(.16), ...baseBlurSat(12,118),
-    slider('Bevel px',1,12,1,2,'px',(p,v)=>{ p._px=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    slider('Light α',.05,.8,.01,.35,'',(p,v)=>{ p._la=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    slider('Dark α',.05,.8,.01,.30,'',(p,v)=>{ p._da=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    ...outerShadowSliders(24,.22), borderWidthSlider(1), borderAlphaSlider(.18)
+    bgAlphaSlider(0.1),
+    slider('Scale', 0, 100, 1, 20, '', (p, v) => { p._scale = v; p._updateFilter(); }),
+    slider('Frequency X', 0.01, 0.2, 0.005, 0.01, '', (p, v) => { p._baseFreqX = v; p._updateFilter(); }),
+    slider('Frequency Y', 0.01, 0.2, 0.005, 0.04, '', (p, v) => { p._baseFreqY = v; p._updateFilter(); }),
+    slider('Octaves', 1, 5, 1, 3, '', (p, v) => { p._numOctaves = v; p._updateFilter(); }),
+    borderWidthSlider(1), borderAlphaSlider(0.08)
   ],
-  buildCSS: buildSimpleCSS
+  buildCSS(p){
+    const mainCss = [];
+    writeBaseCSS(p, mainCss);
+    const finalCss = [
+        `/* --- Make sure to include the SVG filter in your HTML --- */`,
+        `/*
+        <svg style="position:absolute; width:0; height:0;">
+          <filter id="warp-filter">
+            <feTurbulence type="fractalNoise" baseFrequency="${p._baseFreqX} ${p._baseFreqY}" numOctaves="${p._numOctaves}" result="turbulence" />
+            <feDisplacementMap in2="turbulence" in="SourceGraphic" scale="${p._scale}" xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </svg>
+        */`,
+        ``,
+        `.your-selector {`,
+        ...mainCss.map(line => `  ${line}`),
+        `}`
+    ];
+    return finalCss.join('\n');
+  }
 });
 
 /* === 10 Double Glass === */
@@ -402,95 +478,83 @@ CARDS.push({
   buildCSS: buildSimpleCSS
 });
 
-/* === 11 Neon Gradient Border === */
+/* === 11 Holographic Foil (NEW) === */
 CARDS.push({
-  id:'neon', title:'Neon Gradient Border', key:'gradient rim + glow',
+  id:'holographic', title:'Holographic Foil', key:'shifting gradient · blend mode',
   setup(p){
-    p._bgcol='13,14,35'; p.style.position='relative'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
-    p._bw=2; p._ba=0; p.style.border='2px solid transparent';
-    p._angle=135; p._glowBlur=14; p._glowA=.9;
-    p.style.backgroundImage='linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)';
-    p.style.backgroundOrigin='border-box'; p.style.backgroundClip='padding-box, border-box';
-    const glow=el('div'); glow.className='neonGlow'; Object.assign(glow.style,{
-      position:'absolute', inset:'-2px', borderRadius:'inherit', pointerEvents:'none',
-      background:'linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)', filter:'blur(14px)', opacity:'0.9',
-      WebkitMask:'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-      WebkitMaskComposite:'xor', maskComposite:'exclude', padding:'2px'
-    }); p.appendChild(glow);
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.1)'; setBlurSat(p, 10, 130);
+    p.style.border='1px solid rgba(255,255,255,.12)';
+    const fx = el('div'); fx.className = 'holoFx';
+    p._h1 = 315; p._h2 = 90; p._h3 = 220; p._angle = 0; p._op = 0.2; p._blendMode = 'overlay';
+    p._paint = () => {
+      fx.style.background = `conic-gradient(from ${p._angle}deg, hsl(${p._h1}, 100%, 50%), hsl(${p._h2}, 100%, 50%), hsl(${p._h3}, 100%, 50%), hsl(${p._h1}, 100%, 50%))`;
+      fx.style.opacity = String(p._op);
+      fx.style.backgroundBlendMode = p._blendMode;
+    };
+    Object.assign(fx.style, { position: 'absolute', inset: '0', pointerEvents: 'none', borderRadius: 'inherit' });
+    p.appendChild(fx);
+    p._paint();
   },
   sliders:[
-    bgAlphaSlider(.12), ...baseBlurSat(12,120),
-    slider('Border width px',0,10,1,2,'px',(p,v)=>{ p._bw=v; p.style.borderWidth=v+'px'; const g=p.querySelector('.neonGlow'); g.style.inset = (-v)+'px'; g.style.padding = v+'px'; }),
-    slider('Glow blur px',0,60,1,14,'px',(p,v)=>{ p._glowBlur=v; p.querySelector('.neonGlow').style.filter=`blur(${v}px)`; }),
-    slider('Glow opacity',0,1,.01,.9,'',(p,v)=>{ p._glowA=v; p.querySelector('.neonGlow').style.opacity=String(v); }),
-    slider('Angle °',0,360,1,135,'deg',(p,v)=>{ p._angle=v; p.style.backgroundImage=`linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; p.querySelector('.neonGlow').style.background=`linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; })
+    bgAlphaSlider(0.1), ...baseBlurSat(10, 130),
+    slider('Angle', 0, 360, 1, 0, '°', (p, v) => { p._angle = v; p._paint(); }),
+    slider('Opacity', 0, 0.5, 0.01, 0.2, '', (p, v) => { p._op = v; p._paint(); }),
+    slider('Hue 1', 0, 360, 1, 315, '°', (p, v) => { p._h1 = v; p._paint(); }),
+    slider('Hue 2', 0, 360, 1, 90, '°', (p, v) => { p._h2 = v; p._paint(); }),
+    slider('Hue 3', 0, 360, 1, 220, '°', (p, v) => { p._h3 = v; p._paint(); }),
+    borderWidthSlider(1), borderAlphaSlider(0.12)
   ],
   buildCSS(p){
-    const mainCss = [];
-    writeBaseCSS(p,mainCss);
-    mainCss.push(`background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${p._angle}deg,#00ffd5,#7a5cff,#ff00e6);`);
-    mainCss.push(`background-origin: border-box;`);
-    mainCss.push(`background-clip: padding-box, border-box;`);
-
-    const s = getComputedStyle(p.querySelector('.neonGlow'));
-    const pseudoCss = [
-      'content: ""',
-      'position: absolute',
-      `inset: -${p._bw}px`,
-      'pointer-events: none',
-      'border-radius: inherit',
-      `padding: ${p._bw}px`,
-      `opacity: ${p._glowA}`,
-      `background: ${s.background}`,
-      `filter: blur(${p._glowBlur}px)`,
-      '-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-      '-webkit-mask-composite: xor',
-      'mask-composite: exclude'
-    ];
-
-    const finalCss = [
-      `.your-selector {`,
-      ...mainCss.map(line => `  ${line}`),
-      `}`,
-      ``,
-      `.your-selector::after {`,
-      ...pseudoCss.map(line => `  ${line}`),
-      `}`
-    ];
-    return finalCss.join('\n');
+    return buildOverlayCSS(p, 'after', (p_node) => {
+      const s = getComputedStyle(p_node.querySelector('.holoFx'));
+      return [
+        'content: ""', 'position: absolute', 'inset: 0', 'pointer-events: none', 'border-radius: inherit',
+        `opacity: ${s.opacity}`, `background: ${s.backgroundImage}`, `background-blend-mode: ${p_node._blendMode}`
+      ];
+    });
   }
 });
 
-/* === 12 Duotone Prism Edge === */
+/* === 12 Liquid Metal (NEW) === */
 CARDS.push({
-  id:'duoprism', title:'Duotone Prism Edge', key:'two inner rims',
+  id:'liquid-metal', title:'Liquid Metal', key:'metallic gradient · sheen · noise',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,125);
-    p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
-    p._oblur=26; p._oalpha=.20; rebuildShadow(p);
-    p._rimThk=2; p._cA=.55; p._mA=.55;
-    const rim=el('div'); rim.className='duoRim'; p.appendChild(rim);
-    function paint(){ rim.style.position='absolute'; rim.style.inset='0'; rim.style.pointerEvents='none'; rim.style.borderRadius='inherit';
-      rim.style.boxShadow=`inset 0 0 0 1px rgba(0,255,255,${p._cA}), inset 0 0 0 ${p._rimThk}px rgba(255,0,255,${p._mA})`; }
-    p._paintRim=paint; paint();
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.1)'; setBlurSat(p, 12, 120);
+    p.style.border='1px solid rgba(255,255,255,.1)';
+    const fx = el('div'); fx.className = 'metalFx';
+    p._h = 210; p._sheenA = 0.4; p._noiseA = 0.1; p._noiseSize = 1; p._op = 0.8;
+    p._paint = () => {
+      const bg = [
+        `radial-gradient(ellipse at 50% 100%, rgba(255,255,255,${p._sheenA}) 0%, transparent 40%)`,
+        `linear-gradient(175deg, rgba(255,255,255,${p._sheenA*0.5}) 0%, transparent 10%)`,
+        `radial-gradient(ellipse at 100% 0%, hsl(${p._h}, 30%, 70%) 0%, hsl(${p._h}, 20%, 30%) 50%, hsl(${p._h}, 40%, 10%) 100%)`,
+        `radial-gradient(rgba(0,0,0,${p._noiseA}) 1px, transparent 1px)`
+      ];
+      fx.style.backgroundImage = bg.join(', ');
+      fx.style.backgroundSize = `100% 100%, 100% 100%, 100% 100%, ${p._noiseSize}px ${p._noiseSize}px`;
+      fx.style.backgroundBlendMode = 'soft-light, screen, normal, normal';
+      fx.style.opacity = String(p._op);
+    };
+    Object.assign(fx.style, { position: 'absolute', inset: '0', pointerEvents: 'none', borderRadius: 'inherit' });
+    p.appendChild(fx);
+    p._paint();
   },
   sliders:[
-    bgAlphaSlider(.12), ...baseBlurSat(12,125),
-    slider('Rim thickness px',1,10,1,2,'px',(p,v)=>{ p._rimThk=v; p._paintRim(); }),
-    slider('Cyan α',0,1,.01,.55,'',(p,v)=>{ p._cA=v; p._paintRim(); }),
-    slider('Magenta α',0,1,.01,.55,'',(p,v)=>{ p._mA=v; p._paintRim(); }),
-    ...outerShadowSliders(26,.20), borderWidthSlider(1), borderAlphaSlider(.10)
+    bgAlphaSlider(0.1), ...baseBlurSat(12, 120),
+    slider('Metal hue', 0, 360, 1, 210, '°', (p, v) => { p._h = v; p._paint(); }),
+    slider('Sheen α', 0, 1, 0.01, 0.4, '', (p, v) => { p._sheenA = v; p._paint(); }),
+    slider('Noise α', 0, 0.3, 0.01, 0.1, '', (p, v) => { p._noiseA = v; p._paint(); }),
+    slider('Noise size', 1, 4, 1, 1, 'px', (p, v) => { p._noiseSize = v; p._paint(); }),
+    slider('Overlay α', 0.5, 1, 0.01, 0.8, '', (p, v) => { p._op = v; p.querySelector('.metalFx').style.opacity = String(v); }),
+    borderWidthSlider(1), borderAlphaSlider(0.1)
   ],
   buildCSS(p){
-    return buildOverlayCSS(p, 'after', (p) => {
-      const s = getComputedStyle(p.querySelector('.duoRim'));
+    return buildOverlayCSS(p, 'after', (p_node) => {
+      const s = getComputedStyle(p_node.querySelector('.metalFx'));
       return [
-        'content: ""',
-        'position: absolute',
-        'inset: 0',
-        'pointer-events: none',
-        'border-radius: inherit',
-        `box-shadow: ${s.boxShadow}`
+        'content: ""', 'position: absolute', 'inset: 0', 'pointer-events: none', 'border-radius: inherit',
+        `opacity: ${s.opacity}`, `background-image: ${s.backgroundImage}`,
+        `background-size: ${s.backgroundSize}`, `background-blend-mode: ${s.backgroundBlendMode}`
       ];
     });
   }
@@ -503,14 +567,19 @@ CARDS.push({
     p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.14)'; setBlurSat(p,10,120);
     p._bw=1; p._ba=.14; p.style.border='1px solid rgba(255,255,255,.14)';
     const fx=el('div'); fx.className='ringsFx'; p.appendChild(fx);
-    function paint(){ Object.assign(fx.style,{
-      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
-      background:`repeating-radial-gradient(circle at ${p._cx}% ${p._cy}%, rgba(255,255,255,0.14), rgba(255,255,255,0.14) ${p._dot}px, transparent ${p._dot}px, transparent ${p._gap}px)`
-    }); }
-    p._cx=50;p._cy=50;p._dot=2;p._gap=10;p._op=.35; p._paint=paint; paint();
+    p._h=0; p._s=0;
+    p._paint=() => {
+        Object.assign(fx.style,{
+          position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
+          background:`repeating-radial-gradient(circle at ${p._cx}% ${p._cy}%, hsla(${p._h},${p._s}%,100%,0.14), hsla(${p._h},${p._s}%,100%,0.14) ${p._dot}px, transparent ${p._dot}px, transparent ${p._gap}px)`
+        });
+    };
+    p._cx=50;p._cy=50;p._dot=2;p._gap=10;p._op=.35; p._paint();
   },
   sliders:[
     bgAlphaSlider(.14), ...baseBlurSat(10,120),
+    slider('Rings hue',0,360,1,0,'°',(p,v)=>{ p._h=v; p._paint(); }),
+    slider('Rings sat',0,100,1,0,'%',(p,v)=>{ p._s=v; p._paint(); }),
     slider('Rings α',0,1,.01,.35,'',(p,v)=>{ p._op=v; p._paint(); }),
     slider('Center X %',0,100,1,50,'%',(p,v)=>{ p._cx=v; p._paint(); }),
     slider('Center Y %',0,100,1,50,'%',(p,v)=>{ p._cy=v; p._paint(); }),
@@ -522,13 +591,8 @@ CARDS.push({
     return buildOverlayCSS(p, 'after', (p) => {
       const s = getComputedStyle(p.querySelector('.ringsFx'));
       return [
-        'content: ""',
-        'position: absolute',
-        'inset: 0',
-        'pointer-events: none',
-        'border-radius: inherit',
-        `opacity: ${s.opacity}`,
-        `background: ${s.backgroundImage}`
+        'content: ""', 'position: absolute', 'inset: 0', 'pointer-events: none', 'border-radius: inherit',
+        `opacity: ${s.opacity}`, `background: ${s.backgroundImage}`
       ];
     });
   }
@@ -541,14 +605,19 @@ CARDS.push({
     p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.14)'; setBlurSat(p,10,120);
     p._bw=1; p._ba=.14; p.style.border='1px solid rgba(255,255,255,.14)';
     const fx=el('div'); fx.className='scratchFx'; p.appendChild(fx);
-    function paint(){ Object.assign(fx.style,{
-      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
-      background:`repeating-linear-gradient(${p._ang}deg, rgba(255,255,255,.5), rgba(255,255,255,.5) ${p._line}px, transparent ${p._line}px, transparent ${p._gap}px)`
-    }); }
-    p._ang=20;p._line=1;p._gap=6;p._op=.35; p._paint=paint; paint();
+    p._h=0; p._s=0;
+    p._paint=() => {
+        Object.assign(fx.style,{
+          position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
+          background:`repeating-linear-gradient(${p._ang}deg, hsla(${p._h},${p._s}%,100%,.5), hsla(${p._h},${p._s}%,100%,.5) ${p._line}px, transparent ${p._line}px, transparent ${p._gap}px)`
+        });
+    };
+    p._ang=20;p._line=1;p._gap=6;p._op=.35; p._paint();
   },
   sliders:[
     bgAlphaSlider(.14), ...baseBlurSat(10,120),
+    slider('Scratch hue',0,360,1,0,'°',(p,v)=>{ p._h=v; p._paint(); }),
+    slider('Scratch sat',0,100,1,0,'%',(p,v)=>{ p._s=v; p._paint(); }),
     slider('Scratch α',0,1,.01,.35,'',(p,v)=>{ p._op=v; p._paint(); }),
     slider('Angle °',0,180,1,20,'deg',(p,v)=>{ p._ang=v; p._paint(); }),
     slider('Line px',1,4,1,1,'px',(p,v)=>{ p._line=v; p._paint(); }),
@@ -559,13 +628,8 @@ CARDS.push({
     return buildOverlayCSS(p, 'after', (p) => {
       const s = getComputedStyle(p.querySelector('.scratchFx'));
       return [
-        'content: ""',
-        'position: absolute',
-        'inset: 0',
-        'pointer-events: none',
-        'border-radius: inherit',
-        `opacity: ${s.opacity}`,
-        `background: ${s.backgroundImage}`
+        'content: ""', 'position: absolute', 'inset: 0', 'pointer-events: none', 'border-radius: inherit',
+        `opacity: ${s.opacity}`, `background: ${s.backgroundImage}`
       ];
     });
   }
@@ -578,16 +642,22 @@ CARDS.push({
     p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
     p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
     const fx=el('div'); fx.className='filmFx'; p.appendChild(fx);
-    function paint(){ Object.assign(fx.style,{
-      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
-      background:`linear-gradient(${p._ang}deg, rgba(255,0,153,.25), rgba(0,255,204,.25), rgba(0,128,255,.25))`
-    }); }
-    p._ang=130;p._op=.55; p._paint=paint; paint();
+    p._h1=315; p._h2=180; p._h3=240;
+    p._paint=() => {
+        Object.assign(fx.style,{
+          position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
+          background:`linear-gradient(${p._ang}deg, hsla(${p._h1},100%,50%,.25), hsla(${p._h2},100%,50%,.25), hsla(${p._h3},100%,50%,.25))`
+        });
+    };
+    p._ang=130;p._op=.55; p._paint();
   },
   sliders:[
     bgAlphaSlider(.12), ...baseBlurSat(12,120),
     slider('Overlay α',0,1,.01,.55,'',(p,v)=>{ p._op=v; p._paint(); }),
     slider('Angle °',0,360,1,130,'deg',(p,v)=>{ p._ang=v; p._paint(); }),
+    slider('Hue 1',0,360,1,315,'°',(p,v)=>{ p._h1=v; p._paint(); }),
+    slider('Hue 2',0,360,1,180,'°',(p,v)=>{ p._h2=v; p._paint(); }),
+    slider('Hue 3',0,360,1,240,'°',(p,v)=>{ p._h3=v; p._paint(); }),
     borderWidthSlider(1), borderAlphaSlider(.10), ...outerShadowSliders(28,.22)
   ],
   buildCSS(p){
@@ -651,5 +721,18 @@ function makeCard(def){
 const grid = $('#grid');
 for(const def of CARDS){ grid.appendChild(makeCard(def)); }
 </script>
+<svg style="position:absolute;width:0;height:0;">
+  <filter id="warp-filter">
+    <feTurbulence type="fractalNoise" baseFrequency="0.01 0.04" numOctaves="3" result="turbulence" />
+    <feDisplacementMap in2="turbulence" in="SourceGraphic" scale="20" xChannelSelector="R" yChannelSelector="G" />
+  </filter>
+  <filter id="lens-filter">
+      <feComponentTransfer in="SourceAlpha" result="alpha">
+          <feFuncA type="identity"></feFuncA>
+      </feComponentTransfer>
+      <feGaussianBlur in="alpha" stdDeviation="10" result="blur"></feGaussianBlur>
+      <feDisplacementMap in="SourceGraphic" in2="blur" scale="10" xChannelSelector="A" yChannelSelector="A"></feDisplacementMap>
+  </filter>
+</svg>
 </body>
 </html>
