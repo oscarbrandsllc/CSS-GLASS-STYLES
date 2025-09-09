@@ -148,16 +148,17 @@ function buildOverlayCSS(p, pseudo, getPseudoStyles){
 function slider(label, min, max, step, value, unit, apply){ return {label,min,max,step,value,unit,apply}; }
 function borderWidthSlider(init=1){ return slider('Border px',0,6,1,init,'px',(p,v)=>{ const a=parseFloat(p._ba??0.12); p.style.border=`${v}px solid rgba(255,255,255,${a})`; p._bw=v; }); }
 function borderAlphaSlider(init=0.12){ return slider('Border α',0,.8,.01,init,'',(p,v)=>{ const w=parseInt(p._bw??1,10); p.style.border=`${w}px solid rgba(255,255,255,${v})`; p._ba=v; }); }
-function outerShadowSliders(initBlur=28, initA=.22){
+function outerShadowSliders(initBlur=28, initA=.22, initY=10){
   return [
+    slider('Shadow offset Y px',-40,40,1,initY,'px',(p,v)=>{ p._oy=v; rebuildShadow(p); }),
     slider('Shadow blur px',0,60,1,initBlur,'px',(p,v)=>{ p._oblur=v; rebuildShadow(p); }),
     slider('Outer shadow α',0,1,.01,initA,'',(p,v)=>{ p._oalpha=v; rebuildShadow(p); })
   ];
 }
 function rebuildShadow(p){
   const inset = p._inset ? p._inset + ', ' : '';
-  const ob = p._oblur??28, oa = p._oalpha??.22;
-  p.style.boxShadow = inset + `0 10px ${ob}px rgba(0,0,0, ${oa})`;
+  const oy = p._oy??10, ob = p._oblur??28, oa = p._oalpha??.22;
+  p.style.boxShadow = inset + `0 ${oy}px ${ob}px rgba(0,0,0, ${oa})`;
 }
 // base glass sets
 function baseBlurSat(blur=10, sat=120){
@@ -201,21 +202,43 @@ CARDS.push({
   buildCSS: buildSimpleCSS
 });
 
-/* === 3 Dimmed === */
+/* === 3 Lunar Glow === */
 CARDS.push({
-  id:'dim', title:'Dimmed Glass', key:'blur + brightness↓',
+  id:'lunar', title:'Lunar Glow', key:'radial inner glow',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.26)'; p._more='brightness(0.90)';
-    setBlurSat(p,14,115, p._more);
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.14)';
+    p._more='brightness(1.1)';
+    setBlurSat(p,12,120,p._more);
     p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
     p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
+    const fx=el('div'); fx.className='lunarFx'; p.appendChild(fx);
+    function paint(){ Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
+      background:`radial-gradient(circle at ${p._cx}% ${p._cy}%, rgba(255,255,255,${p._glow}), transparent ${p._stop}%)`
+    }); }
+    p._cx=50; p._cy=40; p._glow=.25; p._stop=80; p._paint=paint; paint();
   },
   sliders:[
-    bgAlphaSlider(.26), ...baseBlurSat(14,115),
-    slider('Brightness %',60,120,1,90,'%',(p,v)=>{ p._more=`brightness(${v/100})`; setBlurSat(p, p._blur??14, p._sat??115, p._more); }),
-    borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22)
+    bgAlphaSlider(.14), ...baseBlurSat(12,120),
+    slider('Glow \u03B1',0,.5,.01,.25,'',(p,v)=>{ p._glow=v; p._paint(); }),
+    slider('Glow radius %',40,100,1,80,'%',(p,v)=>{ p._stop=v; p._paint(); }),
+    slider('Glow X %',0,100,1,50,'%',(p,v)=>{ p._cx=v; p._paint(); }),
+    slider('Glow Y %',0,100,1,40,'%',(p,v)=>{ p._cy=v; p._paint(); }),
+    borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22,10)
   ],
-  buildCSS: buildSimpleCSS
+  buildCSS(p){
+    return buildOverlayCSS(p,'after',(p)=>{
+      const s=getComputedStyle(p.querySelector('.lunarFx'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `background: ${s.backgroundImage || s.background}`
+      ];
+    });
+  }
 });
 
 /* === 4 Acrylic === */
@@ -360,24 +383,43 @@ CARDS.push({
   buildCSS: buildSimpleCSS
 });
 
-/* === 9 Inset Bevel === */
+/* === 9 Fluid Border === */
 CARDS.push({
-  id:'bevel', title:'Inset Bevel (4‑side)', key:'bevel px · light α · dark α',
+  id:'fluid', title:'Fluid Border', key:'blurred conic rim',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.16)'; setBlurSat(p,12,118);
-    p._px=2; p._la=.35; p._da=.30;
-    p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`;
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.10)'; setBlurSat(p,10,120);
     p._oblur=24; p._oalpha=.22; rebuildShadow(p);
-    p._bw=1; p._ba=.18; p.style.border='1px solid rgba(255,255,255,.18)';
+    p._bw=1; p._ba=.14; p.style.border='1px solid rgba(255,255,255,.14)';
+    const fx=el('div'); fx.className='fluidFx'; p.appendChild(fx);
+    function paint(){ Object.assign(fx.style,{
+      position:'absolute',inset:'-3px',pointerEvents:'none',borderRadius:'inherit',
+      background:`conic-gradient(from ${p._angle}deg, #00f0ff, #7a5cff, #ff00e6, #00f0ff)`,
+      filter:`blur(${p._blur}px)`,opacity:String(p._op)
+    }); }
+    p._angle=0; p._blur=6; p._op=.5; p._paint=paint; paint();
   },
   sliders:[
-    bgAlphaSlider(.16), ...baseBlurSat(12,118),
-    slider('Bevel px',1,12,1,2,'px',(p,v)=>{ p._px=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    slider('Light α',.05,.8,.01,.35,'',(p,v)=>{ p._la=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    slider('Dark α',.05,.8,.01,.30,'',(p,v)=>{ p._da=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    ...outerShadowSliders(24,.22), borderWidthSlider(1), borderAlphaSlider(.18)
+    bgAlphaSlider(.10), ...baseBlurSat(10,120),
+    slider('Rim blur px',0,20,1,6,'px',(p,v)=>{ p._blur=v; p._paint(); }),
+    slider('Rim \u03B1',0,1,.01,.5,'',(p,v)=>{ p._op=v; p._paint(); }),
+    slider('Hue rotate °',0,360,1,0,'deg',(p,v)=>{ p._angle=v; p._paint(); }),
+    borderWidthSlider(1), borderAlphaSlider(.14), ...outerShadowSliders(24,.22,10)
   ],
-  buildCSS: buildSimpleCSS
+  buildCSS(p){
+    return buildOverlayCSS(p,'before',(p)=>{
+      const s=getComputedStyle(p.querySelector('.fluidFx'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: -3px',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `background: ${s.backgroundImage || s.background}`,
+        `filter: ${s.filter}`,
+        `opacity: ${s.opacity}`
+      ];
+    });
+  }
 });
 
 /* === 10 Double Glass === */
@@ -402,95 +444,78 @@ CARDS.push({
   buildCSS: buildSimpleCSS
 });
 
-/* === 11 Neon Gradient Border === */
+/* === 11 Aurora Wave === */
 CARDS.push({
-  id:'neon', title:'Neon Gradient Border', key:'gradient rim + glow',
+  id:'aurora', title:'Aurora Wave', key:'dual radial glow',
   setup(p){
-    p._bgcol='13,14,35'; p.style.position='relative'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
-    p._bw=2; p._ba=0; p.style.border='2px solid transparent';
-    p._angle=135; p._glowBlur=14; p._glowA=.9;
-    p.style.backgroundImage='linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)';
-    p.style.backgroundOrigin='border-box'; p.style.backgroundClip='padding-box, border-box';
-    const glow=el('div'); glow.className='neonGlow'; Object.assign(glow.style,{
-      position:'absolute', inset:'-2px', borderRadius:'inherit', pointerEvents:'none',
-      background:'linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)', filter:'blur(14px)', opacity:'0.9',
-      WebkitMask:'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-      WebkitMaskComposite:'xor', maskComposite:'exclude', padding:'2px'
-    }); p.appendChild(glow);
-  },
-  sliders:[
-    bgAlphaSlider(.12), ...baseBlurSat(12,120),
-    slider('Border width px',0,10,1,2,'px',(p,v)=>{ p._bw=v; p.style.borderWidth=v+'px'; const g=p.querySelector('.neonGlow'); g.style.inset = (-v)+'px'; g.style.padding = v+'px'; }),
-    slider('Glow blur px',0,60,1,14,'px',(p,v)=>{ p._glowBlur=v; p.querySelector('.neonGlow').style.filter=`blur(${v}px)`; }),
-    slider('Glow opacity',0,1,.01,.9,'',(p,v)=>{ p._glowA=v; p.querySelector('.neonGlow').style.opacity=String(v); }),
-    slider('Angle °',0,360,1,135,'deg',(p,v)=>{ p._angle=v; p.style.backgroundImage=`linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; p.querySelector('.neonGlow').style.background=`linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; })
-  ],
-  buildCSS(p){
-    const mainCss = [];
-    writeBaseCSS(p,mainCss);
-    mainCss.push(`background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${p._angle}deg,#00ffd5,#7a5cff,#ff00e6);`);
-    mainCss.push(`background-origin: border-box;`);
-    mainCss.push(`background-clip: padding-box, border-box;`);
-
-    const s = getComputedStyle(p.querySelector('.neonGlow'));
-    const pseudoCss = [
-      'content: ""',
-      'position: absolute',
-      `inset: -${p._bw}px`,
-      'pointer-events: none',
-      'border-radius: inherit',
-      `padding: ${p._bw}px`,
-      `opacity: ${p._glowA}`,
-      `background: ${s.background}`,
-      `filter: blur(${p._glowBlur}px)`,
-      '-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-      '-webkit-mask-composite: xor',
-      'mask-composite: exclude'
-    ];
-
-    const finalCss = [
-      `.your-selector {`,
-      ...mainCss.map(line => `  ${line}`),
-      `}`,
-      ``,
-      `.your-selector::after {`,
-      ...pseudoCss.map(line => `  ${line}`),
-      `}`
-    ];
-    return finalCss.join('\n');
-  }
-});
-
-/* === 12 Duotone Prism Edge === */
-CARDS.push({
-  id:'duoprism', title:'Duotone Prism Edge', key:'two inner rims',
-  setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,125);
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.14)'; setBlurSat(p,12,120);
     p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
-    p._oblur=26; p._oalpha=.20; rebuildShadow(p);
-    p._rimThk=2; p._cA=.55; p._mA=.55;
-    const rim=el('div'); rim.className='duoRim'; p.appendChild(rim);
-    function paint(){ rim.style.position='absolute'; rim.style.inset='0'; rim.style.pointerEvents='none'; rim.style.borderRadius='inherit';
-      rim.style.boxShadow=`inset 0 0 0 1px rgba(0,255,255,${p._cA}), inset 0 0 0 ${p._rimThk}px rgba(255,0,255,${p._mA})`; }
-    p._paintRim=paint; paint();
+    p._oblur=26; p._oalpha=.22; rebuildShadow(p);
+    const fx=el('div'); fx.className='auroraFx'; p.appendChild(fx);
+    function paint(){ Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
+      background:`radial-gradient(circle at 0% 100%, rgba(0,255,255,${p._a1}), transparent ${p._s}%),\
+                  radial-gradient(circle at 100% 0%, rgba(255,0,255,${p._a2}), transparent ${p._s}%)`
+    }); }
+    p._a1=.35; p._a2=.35; p._s=60; p._paint=paint; paint();
   },
   sliders:[
-    bgAlphaSlider(.12), ...baseBlurSat(12,125),
-    slider('Rim thickness px',1,10,1,2,'px',(p,v)=>{ p._rimThk=v; p._paintRim(); }),
-    slider('Cyan α',0,1,.01,.55,'',(p,v)=>{ p._cA=v; p._paintRim(); }),
-    slider('Magenta α',0,1,.01,.55,'',(p,v)=>{ p._mA=v; p._paintRim(); }),
-    ...outerShadowSliders(26,.20), borderWidthSlider(1), borderAlphaSlider(.10)
+    bgAlphaSlider(.14), ...baseBlurSat(12,120),
+    slider('Glow size %',20,80,1,60,'%',(p,v)=>{ p._s=v; p._paint(); }),
+    slider('Cyan glow \u03B1',0,1,.01,.35,'',(p,v)=>{ p._a1=v; p._paint(); }),
+    slider('Magenta glow \u03B1',0,1,.01,.35,'',(p,v)=>{ p._a2=v; p._paint(); }),
+    borderWidthSlider(1), borderAlphaSlider(.10), ...outerShadowSliders(26,.22,10)
   ],
   buildCSS(p){
-    return buildOverlayCSS(p, 'after', (p) => {
-      const s = getComputedStyle(p.querySelector('.duoRim'));
+    return buildOverlayCSS(p,'after',(p)=>{
+      const s=getComputedStyle(p.querySelector('.auroraFx'));
       return [
         'content: ""',
         'position: absolute',
         'inset: 0',
         'pointer-events: none',
         'border-radius: inherit',
-        `box-shadow: ${s.boxShadow}`
+        `background: ${s.backgroundImage || s.background}`
+      ];
+    });
+  }
+});
+
+/* === 12 Holographic Sheen === */
+CARDS.push({
+  id:'holo', title:'Holographic Sheen', key:'conic overlay · blend',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
+    p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
+    p._oblur=26; p._oalpha=.20; rebuildShadow(p);
+    const fx=el('div'); fx.className='holoFx'; p.appendChild(fx);
+    function paint(){ Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',mixBlendMode:'screen',
+      background:`conic-gradient(from ${p._ang}deg at 50% 50%, #00f0ff, #ff00e6, #00f0ff)`,
+      filter:`blur(${p._blur}px)`,opacity:String(p._op)
+    }); }
+    p._ang=0; p._blur=12; p._op=.6; p._paint=paint; paint();
+  },
+  sliders:[
+    bgAlphaSlider(.12), ...baseBlurSat(12,120),
+    slider('Sheen blur px',0,30,1,12,'px',(p,v)=>{ p._blur=v; p._paint(); }),
+    slider('Sheen \u03B1',0,1,.01,.6,'',(p,v)=>{ p._op=v; p._paint(); }),
+    slider('Angle °',0,360,1,0,'deg',(p,v)=>{ p._ang=v; p._paint(); }),
+    ...outerShadowSliders(26,.20,10), borderWidthSlider(1), borderAlphaSlider(.10)
+  ],
+  buildCSS(p){
+    return buildOverlayCSS(p,'after',(p)=>{
+      const s=getComputedStyle(p.querySelector('.holoFx'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `mix-blend-mode: ${s.mixBlendMode}`,
+        `background: ${s.backgroundImage || s.background}`,
+        `filter: ${s.filter}`,
+        `opacity: ${s.opacity}`
       ];
     });
   }
