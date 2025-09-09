@@ -172,53 +172,186 @@ function bgAlphaSlider(initA=0.12){
 
 const CARDS=[];
 
-/* === 1 Soft === */
+/* === 1 Thick Glass === */
 CARDS.push({
-  id:'soft', title:'Soft Glass', key:'blur · saturate · base α',
+  id:'thick-glass', title:'Thick Glass', key:'a thick, beveled edge with multi-directional lighting',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.10)'; setBlurSat(p,6,110);
-    p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
-    p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
+    p._bgcol='20,20,30'; p.style.backgroundColor='rgba(20,20,30,0.15)'; setBlurSat(p,18,140);
+    p._inset = `
+      inset 0 1px 0 rgba(255,255,255,0.2),
+      inset 0 -1px 0 rgba(0,0,0,0.2),
+      inset 1px 0 0 rgba(255,255,255,0.2),
+      inset -1px 0 0 rgba(0,0,0,0.2),
+      inset 0 0 10px rgba(0,0,0,0.3)
+    `;
+    p._oblur=30; p._oalpha=.2; rebuildShadow(p);
+    p._bw=0; p._ba=0; p.style.border='0px solid transparent';
   },
-  sliders:[ bgAlphaSlider(.10), ...baseBlurSat(6,110), borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22) ],
+  sliders:[
+    bgAlphaSlider(.15), ...baseBlurSat(18,140),
+    ...outerShadowSliders(30,.2)
+  ],
   buildCSS: buildSimpleCSS
 });
 
-/* === 2 Bright === */
+/* === 2 Reflective Edge === */
+CARDS.push({
+  id:'reflective-edge', title:'Reflective Edge', key:'a bright, reflective edge with a soft inner glow',
+  setup(p){
+    p._bgcol='220,220,230'; p.style.backgroundColor='rgba(220,220,230,0.1)'; setBlurSat(p,16,120);
+    p._inset = `
+      inset 0 1px 1px rgba(255,255,255,0.4),
+      inset 0 -1px 1px rgba(255,255,255,0.2)
+    `;
+    p._oblur=20; p._oalpha=.1; rebuildShadow(p);
+    p._bw=1; p._ba=.3; p.style.border='1px solid rgba(255,255,255,.3)';
+  },
+  sliders:[
+    bgAlphaSlider(.1), ...baseBlurSat(16,120),
+    borderWidthSlider(1), borderAlphaSlider(.3),
+    ...outerShadowSliders(20,.1)
+  ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 3 Refractive Edge === */
+CARDS.push({
+  id:'refractive-edge', title:'Refractive Edge', key:'a dark, refractive edge with a subtle inner shadow',
+  setup(p){
+    p._bgcol='10,10,15'; p.style.backgroundColor='rgba(10,10,15,0.25)'; setBlurSat(p,20,160);
+    p._inset = `
+      inset 0 1px 2px rgba(0,0,0,0.3),
+      inset 0 -1px 2px rgba(0,0,0,0.3)
+    `;
+    p._oblur=40; p._oalpha=.3; rebuildShadow(p);
+    p._bw=1; p._ba=.05; p.style.border='1px solid rgba(255,255,255,.05)';
+  },
+  sliders:[
+    bgAlphaSlider(.25), ...baseBlurSat(20,160),
+    borderWidthSlider(1), borderAlphaSlider(.05),
+    ...outerShadowSliders(40,.3)
+  ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 4 Multi-directional Sheen === */
+CARDS.push({
+  id:'multi-sheen', title:'Multi-directional Sheen', key:'a complex sheen with multiple light sources',
+  setup(p){
+    p._bgcol='20,25,40'; p.style.backgroundColor='rgba(20,25,40,0.2)'; setBlurSat(p,14,130);
+    p._inset=''; p._oblur=30; p._oalpha=.2; rebuildShadow(p);
+    p._bw=1; p._ba=.1; p.style.border='1px solid rgba(255,255,255,.1)';
+    const fx=el('div'); fx.className='sheenFx'; p.appendChild(fx);
+    function paint(){ Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
+      background:`
+        linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%),
+        linear-gradient(-45deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%)
+      `
+    }); }
+    p._paint=paint; paint();
+  },
+  sliders:[
+    bgAlphaSlider(.2), ...baseBlurSat(14,130),
+    borderWidthSlider(1), borderAlphaSlider(.1),
+    ...outerShadowSliders(30,.2)
+  ],
+  buildCSS(p){
+    return buildOverlayCSS(p, 'before', (p) => {
+      const s = getComputedStyle(p.querySelector('.sheenFx'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `background: ${s.backgroundImage || s.background}`
+      ];
+    });
+  }
+});
+
+/* === 5 Inner Glow === */
+CARDS.push({
+  id:'inner-glow', title:'Inner Glow', key:'a soft, blurred inner glow',
+  setup(p){
+    p._bgcol='30,20,40'; p.style.backgroundColor='rgba(30,20,40,0.15)'; setBlurSat(p,16,130);
+    p._inset = `inset 0 0 20px rgba(255,255,255,0.1)`;
+    p._oblur=25; p._oalpha=.15; rebuildShadow(p);
+    p._bw=1; p._ba=.15; p.style.border='1px solid rgba(255,255,255,.15)';
+  },
+  sliders:[
+    bgAlphaSlider(.15), ...baseBlurSat(16,130),
+    slider('Glow Radius', 0, 50, 1, 20, 'px', (p,v)=>{ p._inset = `inset 0 0 ${v}px rgba(255,255,255,${p._glowA||0.1})`; rebuildShadow(p); }),
+    slider('Glow Alpha', 0, 0.5, 0.01, 0.1, '', (p,v)=>{ p._glowA=v; p._inset = `inset 0 0 20px rgba(255,255,255,${v})`; rebuildShadow(p); }),
+    borderWidthSlider(1), borderAlphaSlider(.15),
+    ...outerShadowSliders(25,.15)
+  ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 6 Sharp Bevel === */
+CARDS.push({
+  id:'sharp-bevel', title:'Sharp Bevel', key:'a sharp, chiseled bevel with no blur',
+  setup(p){
+    p._bgcol='25,25,35'; p.style.backgroundColor='rgba(25,25,35,0.2)'; setBlurSat(p,12,120);
+    p._offset=1;
+    p._inset = `
+      inset 1px 1px 0 rgba(255,255,255,0.25),
+      inset -1px -1px 0 rgba(0,0,0,0.25)
+    `;
+    p._oblur=35; p._oalpha=.25; rebuildShadow(p);
+    p._bw=0; p._ba=0; p.style.border='0px solid transparent';
+  },
+  sliders:[
+    bgAlphaSlider(.2), ...baseBlurSat(12,120),
+    slider('Bevel Offset', 0, 5, 0.5, 1, 'px', (p,v)=>{ p._inset = `inset ${v}px ${v}px 0 rgba(255,255,255,${p._lightA||0.25}), inset -${v}px -${v}px 0 rgba(0,0,0,${p._darkA||0.25})`; rebuildShadow(p); }),
+    slider('Light Alpha', 0, 1, 0.01, 0.25, '', (p,v)=>{ const o=p._offset||1; p._lightA=v; p._inset = `inset ${o}px ${o}px 0 rgba(255,255,255,${v}), inset -${o}px -${o}px 0 rgba(0,0,0,${p._darkA||0.25})`; rebuildShadow(p); }),
+    slider('Dark Alpha', 0, 1, 0.01, 0.25, '', (p,v)=>{ const o=p._offset||1; p._darkA=v; p._inset = `inset ${o}px ${o}px 0 rgba(255,255,255,${p._lightA||0.25}), inset -${o}px -${o}px 0 rgba(0,0,0,${v})`; rebuildShadow(p); }),
+    ...outerShadowSliders(35,.25)
+  ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 7 Combined Effects === */
+CARDS.push({
+  id:'combined-effects', title:'Combined Effects', key:'a complex style with multiple effects',
+  setup(p){
+    p._bgcol='20,30,50'; p.style.backgroundColor='rgba(20,30,50,0.1)'; setBlurSat(p,15,150);
+    p._inset = `
+      inset 0 1px 1px rgba(255,255,255,0.25),
+      inset 0 0 15px rgba(0,0,0,0.2)
+    `;
+    p._oblur=40; p._oalpha=.2; rebuildShadow(p);
+    p._bw=1; p._ba=.1; p.style.border='1px solid rgba(255,255,255,.1)';
+  },
+  sliders:[
+    bgAlphaSlider(.1), ...baseBlurSat(15,150),
+    borderWidthSlider(1), borderAlphaSlider(.1),
+    ...outerShadowSliders(40,.2)
+  ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 8 Bright === */
 CARDS.push({
   id:'bright', title:'Bright Glass', key:'blur + brightness↑',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; p._more='brightness(1.08)';
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)';
+    p._more='brightness(1.15)';
     setBlurSat(p,12,125, p._more);
     p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
     p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
   },
   sliders:[
     bgAlphaSlider(.12), ...baseBlurSat(12,125),
-    slider('Brightness %',90,160,1,108,'%',(p,v)=>{ p._more=`brightness(${v/100})`; setBlurSat(p, p._blur??12, p._sat??125, p._more); }),
+    slider('Brightness %',90,160,1,115,'%',(p,v)=>{ p._more=`brightness(${v/100})`; setBlurSat(p, p._blur??12, p._sat??125, p._more); }),
     borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22)
   ],
   buildCSS: buildSimpleCSS
 });
 
-/* === 3 Dimmed === */
-CARDS.push({
-  id:'dim', title:'Dimmed Glass', key:'blur + brightness↓',
-  setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.26)'; p._more='brightness(0.90)';
-    setBlurSat(p,14,115, p._more);
-    p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
-    p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
-  },
-  sliders:[
-    bgAlphaSlider(.26), ...baseBlurSat(14,115),
-    slider('Brightness %',60,120,1,90,'%',(p,v)=>{ p._more=`brightness(${v/100})`; setBlurSat(p, p._blur??14, p._sat??115, p._more); }),
-    borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22)
-  ],
-  buildCSS: buildSimpleCSS
-});
-
-/* === 4 Acrylic === */
+/* === 9 Acrylic === */
 CARDS.push({
   id:'acrylic', title:'Acrylic', key:'blur · saturate · dotted noise',
   setup(p){
@@ -227,13 +360,13 @@ CARDS.push({
     p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
     const fx=el('div'); fx.className='noise'; Object.assign(fx.style,{
       position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
-      backgroundImage:'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)',
+      backgroundImage:'radial-gradient(rgba(255,255,255,0.02) 1px, transparent 1px)',
       backgroundSize:'2px 2px'
     }); p.appendChild(fx);
   },
   sliders:[
     bgAlphaSlider(.06), ...baseBlurSat(8,130),
-    slider('Noise α',0,.12,.001,.03,'',(p,v)=>{ p.querySelector('.noise').style.backgroundImage=`radial-gradient(rgba(255,255,255,${v}) 1px, transparent 1px)`; }),
+    slider('Noise α',0,.12,.001,.02,'',(p,v)=>{ p.querySelector('.noise').style.backgroundImage=`radial-gradient(rgba(255,255,255,${v}) 1px, transparent 1px)`; }),
     slider('Noise size px',1,8,1,2,'px',(p,v)=>{ p.querySelector('.noise').style.backgroundSize=`${v}px ${v}px`; }),
     borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(30,.22)
   ],
@@ -253,7 +386,7 @@ CARDS.push({
   }
 });
 
-/* === 5 Paper Noise === */
+/* === 10 Paper Noise === */
 CARDS.push({
   id:'paper', title:'Paper Noise', key:'dual grain overlay',
   setup(p){
@@ -263,12 +396,12 @@ CARDS.push({
     const fx=el('div'); fx.className='paperFx'; Object.assign(fx.style,{
       position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
       backgroundImage:'radial-gradient(rgba(255,255,255,.03) 1px, transparent 1px), radial-gradient(rgba(0,0,0,.06) 1px, transparent 1px)',
-      backgroundSize:'1px 1px, 2px 2px',opacity:'0.7'
+      backgroundSize:'1px 1px, 2px 2px',opacity:'0.5'
     }); p.appendChild(fx);
   },
   sliders:[
     bgAlphaSlider(.10), ...baseBlurSat(10,120),
-    slider('Grain opacity',0,1,.01,.7,'',(p,v)=>{ p.querySelector('.paperFx').style.opacity=String(v); }),
+    slider('Grain opacity',0,1,.01,.5,'',(p,v)=>{ p.querySelector('.paperFx').style.opacity=String(v); }),
     slider('Grain size px',1,8,1,1,'px',(p,v)=>{ p.querySelector('.paperFx').style.backgroundSize=`${v}px ${v}px, ${v*2}px ${v*2}px`; }),
     borderWidthSlider(1), borderAlphaSlider(.10), ...outerShadowSliders(30,.20)
   ],
@@ -289,7 +422,7 @@ CARDS.push({
   }
 });
 
-/* === 6 Glossy === */
+/* === 11 Glossy === */
 CARDS.push({
   id:'gloss', title:'Glossy Highlight', key:'top sheen',
   setup(p){
@@ -301,11 +434,11 @@ CARDS.push({
       position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
       background:`linear-gradient(${p._sheenAngle}deg, rgba(255,255,255,${p._sheenA}), rgba(255,255,255,0) ${p._sheenStop}%)`
     }); }
-    p._sheenAngle=180; p._sheenStop=35; p._sheenA=.18; p._paint=paint; paint();
+    p._sheenAngle=180; p._sheenStop=35; p._sheenA=.15; p._paint=paint; paint();
   },
   sliders:[
     bgAlphaSlider(.12), ...baseBlurSat(12,120),
-    slider('Sheen α',0,.6,.01,.18,'',(p,v)=>{ p._sheenA=v; p._paint(); }),
+    slider('Sheen α',0,.6,.01,.15,'',(p,v)=>{ p._sheenA=v; p._paint(); }),
     slider('Sheen stop %',10,80,1,35,'%',(p,v)=>{ p._sheenStop=v; p._paint(); }),
     slider('Sheen angle °',0,360,1,180,'deg',(p,v)=>{ p._sheenAngle=v; p._paint(); }),
     borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(30,.22)
@@ -325,67 +458,12 @@ CARDS.push({
   }
 });
 
-/* === 7 Tinted === */
-CARDS.push({
-  id:'tint', title:'Tinted (HSLA)', key:'tint hue · alpha',
-  setup(p){
-    p._h=270; p._tinta=.18;
-    p.style.backgroundColor=`hsla(${p._h},70%,45%,${p._tinta})`;
-    setBlurSat(p,12,120);
-    p._inset=''; p._oblur=30; p._oalpha=.22; rebuildShadow(p);
-    p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
-  },
-  sliders:[
-    ...baseBlurSat(12,120),
-    slider('Tint hue °',0,360,1,270,'deg',(p,v)=>{ p._h=v; p.style.backgroundColor=`hsla(${p._h},70%,45%,${p._tinta})`; }),
-    slider('Tint α',0,.6,.01,.18,'',(p,v)=>{ p._tinta=v; p.style.backgroundColor=`hsla(${p._h},70%,45%,${p._tinta})`; }),
-    borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(30,.22)
-  ],
-  buildCSS: buildSimpleCSS
-});
-
-/* === 8 Heavy Frost === */
-CARDS.push({
-  id:'frost', title:'Heavy Frost', key:'white frost',
-  setup(p){
-    p._fA=.16; p.style.backgroundColor=`rgba(255,255,255,${p._fA})`; setBlurSat(p,14,120);
-    p._inset=''; p._oblur=32; p._oalpha=.22; rebuildShadow(p);
-    p._bw=1; p._ba=.22; p.style.border='1px solid rgba(255,255,255,.22)';
-  },
-  sliders:[
-    ...baseBlurSat(14,120),
-    slider('Frost α',0,.6,.01,.16,'',(p,v)=>{ p._fA=v; p.style.backgroundColor=`rgba(255,255,255,${p._fA})`; }),
-    borderWidthSlider(1), borderAlphaSlider(.22), ...outerShadowSliders(32,.22)
-  ],
-  buildCSS: buildSimpleCSS
-});
-
-/* === 9 Inset Bevel === */
-CARDS.push({
-  id:'bevel', title:'Inset Bevel (4‑side)', key:'bevel px · light α · dark α',
-  setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.16)'; setBlurSat(p,12,118);
-    p._px=2; p._la=.35; p._da=.30;
-    p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`;
-    p._oblur=24; p._oalpha=.22; rebuildShadow(p);
-    p._bw=1; p._ba=.18; p.style.border='1px solid rgba(255,255,255,.18)';
-  },
-  sliders:[
-    bgAlphaSlider(.16), ...baseBlurSat(12,118),
-    slider('Bevel px',1,12,1,2,'px',(p,v)=>{ p._px=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    slider('Light α',.05,.8,.01,.35,'',(p,v)=>{ p._la=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    slider('Dark α',.05,.8,.01,.30,'',(p,v)=>{ p._da=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    ...outerShadowSliders(24,.22), borderWidthSlider(1), borderAlphaSlider(.18)
-  ],
-  buildCSS: buildSimpleCSS
-});
-
-/* === 10 Double Glass === */
+/* === 12 Double Glass === */
 CARDS.push({
   id:'double', title:'Double Glass', key:'outer rim · inner rim · alphas',
   setup(p){
     p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.14)'; setBlurSat(p,12,120);
-    p._outerPx=12; p._innerPx=2; p._r1=.20; p._r2=.45;
+    p._outerPx=8; p._innerPx=2; p._r1=.20; p._r2=.45;
     p._rims = ()=> `inset 0 0 0 ${p._outerPx}px rgba(255,255,255,${p._r1}), inset 0 0 0 ${p._innerPx}px rgba(255,255,255,${p._r2})`;
     p._inset = p._rims();
     p._oblur=26; p._oalpha=.22; rebuildShadow(p);
@@ -393,107 +471,13 @@ CARDS.push({
   },
   sliders:[
     bgAlphaSlider(.14), ...baseBlurSat(12,120),
-    slider('Outer rim px',0,30,1,12,'px',(p,v)=>{ p._outerPx=v; p._inset = p._rims(); rebuildShadow(p); }),
+    slider('Outer rim px',0,30,1,8,'px',(p,v)=>{ p._outerPx=v; p._inset = p._rims(); rebuildShadow(p); }),
     slider('Outer α',0,.6,.01,.20,'',(p,v)=>{ p._r1=v; p._inset = p._rims(); rebuildShadow(p); }),
     slider('Inner rim px',0,12,1,2,'px',(p,v)=>{ p._innerPx=v; p._inset = p._rims(); rebuildShadow(p); }),
     slider('Inner α',0,.9,.01,.45,'',(p,v)=>{ p._r2=v; p._inset = p._rims(); rebuildShadow(p); }),
     ...outerShadowSliders(26,.22), borderWidthSlider(0), borderAlphaSlider(.12)
   ],
   buildCSS: buildSimpleCSS
-});
-
-/* === 11 Neon Gradient Border === */
-CARDS.push({
-  id:'neon', title:'Neon Gradient Border', key:'gradient rim + glow',
-  setup(p){
-    p._bgcol='13,14,35'; p.style.position='relative'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
-    p._bw=2; p._ba=0; p.style.border='2px solid transparent';
-    p._angle=135; p._glowBlur=14; p._glowA=.9;
-    p.style.backgroundImage='linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)';
-    p.style.backgroundOrigin='border-box'; p.style.backgroundClip='padding-box, border-box';
-    const glow=el('div'); glow.className='neonGlow'; Object.assign(glow.style,{
-      position:'absolute', inset:'-2px', borderRadius:'inherit', pointerEvents:'none',
-      background:'linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)', filter:'blur(14px)', opacity:'0.9',
-      WebkitMask:'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-      WebkitMaskComposite:'xor', maskComposite:'exclude', padding:'2px'
-    }); p.appendChild(glow);
-  },
-  sliders:[
-    bgAlphaSlider(.12), ...baseBlurSat(12,120),
-    slider('Border width px',0,10,1,2,'px',(p,v)=>{ p._bw=v; p.style.borderWidth=v+'px'; const g=p.querySelector('.neonGlow'); g.style.inset = (-v)+'px'; g.style.padding = v+'px'; }),
-    slider('Glow blur px',0,60,1,14,'px',(p,v)=>{ p._glowBlur=v; p.querySelector('.neonGlow').style.filter=`blur(${v}px)`; }),
-    slider('Glow opacity',0,1,.01,.9,'',(p,v)=>{ p._glowA=v; p.querySelector('.neonGlow').style.opacity=String(v); }),
-    slider('Angle °',0,360,1,135,'deg',(p,v)=>{ p._angle=v; p.style.backgroundImage=`linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; p.querySelector('.neonGlow').style.background=`linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; })
-  ],
-  buildCSS(p){
-    const mainCss = [];
-    writeBaseCSS(p,mainCss);
-    mainCss.push(`background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${p._angle}deg,#00ffd5,#7a5cff,#ff00e6);`);
-    mainCss.push(`background-origin: border-box;`);
-    mainCss.push(`background-clip: padding-box, border-box;`);
-
-    const s = getComputedStyle(p.querySelector('.neonGlow'));
-    const pseudoCss = [
-      'content: ""',
-      'position: absolute',
-      `inset: -${p._bw}px`,
-      'pointer-events: none',
-      'border-radius: inherit',
-      `padding: ${p._bw}px`,
-      `opacity: ${p._glowA}`,
-      `background: ${s.background}`,
-      `filter: blur(${p._glowBlur}px)`,
-      '-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-      '-webkit-mask-composite: xor',
-      'mask-composite: exclude'
-    ];
-
-    const finalCss = [
-      `.your-selector {`,
-      ...mainCss.map(line => `  ${line}`),
-      `}`,
-      ``,
-      `.your-selector::after {`,
-      ...pseudoCss.map(line => `  ${line}`),
-      `}`
-    ];
-    return finalCss.join('\n');
-  }
-});
-
-/* === 12 Duotone Prism Edge === */
-CARDS.push({
-  id:'duoprism', title:'Duotone Prism Edge', key:'two inner rims',
-  setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,125);
-    p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
-    p._oblur=26; p._oalpha=.20; rebuildShadow(p);
-    p._rimThk=2; p._cA=.55; p._mA=.55;
-    const rim=el('div'); rim.className='duoRim'; p.appendChild(rim);
-    function paint(){ rim.style.position='absolute'; rim.style.inset='0'; rim.style.pointerEvents='none'; rim.style.borderRadius='inherit';
-      rim.style.boxShadow=`inset 0 0 0 1px rgba(0,255,255,${p._cA}), inset 0 0 0 ${p._rimThk}px rgba(255,0,255,${p._mA})`; }
-    p._paintRim=paint; paint();
-  },
-  sliders:[
-    bgAlphaSlider(.12), ...baseBlurSat(12,125),
-    slider('Rim thickness px',1,10,1,2,'px',(p,v)=>{ p._rimThk=v; p._paintRim(); }),
-    slider('Cyan α',0,1,.01,.55,'',(p,v)=>{ p._cA=v; p._paintRim(); }),
-    slider('Magenta α',0,1,.01,.55,'',(p,v)=>{ p._mA=v; p._paintRim(); }),
-    ...outerShadowSliders(26,.20), borderWidthSlider(1), borderAlphaSlider(.10)
-  ],
-  buildCSS(p){
-    return buildOverlayCSS(p, 'after', (p) => {
-      const s = getComputedStyle(p.querySelector('.duoRim'));
-      return [
-        'content: ""',
-        'position: absolute',
-        'inset: 0',
-        'pointer-events: none',
-        'border-radius: inherit',
-        `box-shadow: ${s.boxShadow}`
-      ];
-    });
-  }
 });
 
 /* === 13 Ringed Glass === */
@@ -507,11 +491,11 @@ CARDS.push({
       position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
       background:`repeating-radial-gradient(circle at ${p._cx}% ${p._cy}%, rgba(255,255,255,0.14), rgba(255,255,255,0.14) ${p._dot}px, transparent ${p._dot}px, transparent ${p._gap}px)`
     }); }
-    p._cx=50;p._cy=50;p._dot=2;p._gap=10;p._op=.35; p._paint=paint; paint();
+    p._cx=50;p._cy=50;p._dot=2;p._gap=10;p._op=.2; p._paint=paint; paint();
   },
   sliders:[
     bgAlphaSlider(.14), ...baseBlurSat(10,120),
-    slider('Rings α',0,1,.01,.35,'',(p,v)=>{ p._op=v; p._paint(); }),
+    slider('Rings α',0,1,.01,.2,'',(p,v)=>{ p._op=v; p._paint(); }),
     slider('Center X %',0,100,1,50,'%',(p,v)=>{ p._cx=v; p._paint(); }),
     slider('Center Y %',0,100,1,50,'%',(p,v)=>{ p._cy=v; p._paint(); }),
     slider('Dot px',1,8,1,2,'px',(p,v)=>{ p._dot=v; p._paint(); }),
@@ -545,11 +529,11 @@ CARDS.push({
       position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
       background:`repeating-linear-gradient(${p._ang}deg, rgba(255,255,255,.5), rgba(255,255,255,.5) ${p._line}px, transparent ${p._line}px, transparent ${p._gap}px)`
     }); }
-    p._ang=20;p._line=1;p._gap=6;p._op=.35; p._paint=paint; paint();
+    p._ang=20;p._line=1;p._gap=6;p._op=.2; p._paint=paint; paint();
   },
   sliders:[
     bgAlphaSlider(.14), ...baseBlurSat(10,120),
-    slider('Scratch α',0,1,.01,.35,'',(p,v)=>{ p._op=v; p._paint(); }),
+    slider('Scratch α',0,1,.01,.2,'',(p,v)=>{ p._op=v; p._paint(); }),
     slider('Angle °',0,180,1,20,'deg',(p,v)=>{ p._ang=v; p._paint(); }),
     slider('Line px',1,4,1,1,'px',(p,v)=>{ p._line=v; p._paint(); }),
     slider('Gap px',4,20,1,6,'px',(p,v)=>{ p._gap=v; p._paint(); }),
@@ -582,11 +566,11 @@ CARDS.push({
       position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
       background:`linear-gradient(${p._ang}deg, rgba(255,0,153,.25), rgba(0,255,204,.25), rgba(0,128,255,.25))`
     }); }
-    p._ang=130;p._op=.55; p._paint=paint; paint();
+    p._ang=130;p._op=.4; p._paint=paint; paint();
   },
   sliders:[
     bgAlphaSlider(.12), ...baseBlurSat(12,120),
-    slider('Overlay α',0,1,.01,.55,'',(p,v)=>{ p._op=v; p._paint(); }),
+    slider('Overlay α',0,1,.01,.4,'',(p,v)=>{ p._op=v; p._paint(); }),
     slider('Angle °',0,360,1,130,'deg',(p,v)=>{ p._ang=v; p._paint(); }),
     borderWidthSlider(1), borderAlphaSlider(.10), ...outerShadowSliders(28,.22)
   ],
