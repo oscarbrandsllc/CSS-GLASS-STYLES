@@ -148,16 +148,18 @@ function buildOverlayCSS(p, pseudo, getPseudoStyles){
 function slider(label, min, max, step, value, unit, apply){ return {label,min,max,step,value,unit,apply}; }
 function borderWidthSlider(init=1){ return slider('Border px',0,6,1,init,'px',(p,v)=>{ const a=parseFloat(p._ba??0.12); p.style.border=`${v}px solid rgba(255,255,255,${a})`; p._bw=v; }); }
 function borderAlphaSlider(init=0.12){ return slider('Border α',0,.8,.01,init,'',(p,v)=>{ const w=parseInt(p._bw??1,10); p.style.border=`${w}px solid rgba(255,255,255,${v})`; p._ba=v; }); }
-function outerShadowSliders(initBlur=28, initA=.22){
+function outerShadowSliders(initBlur=28, initA=.22, initY=10){
   return [
+    slider('Shadow offset Y',-50,50,1,initY,'px',(p,v)=>{ p._oy=v; rebuildShadow(p); }),
     slider('Shadow blur px',0,60,1,initBlur,'px',(p,v)=>{ p._oblur=v; rebuildShadow(p); }),
     slider('Outer shadow α',0,1,.01,initA,'',(p,v)=>{ p._oalpha=v; rebuildShadow(p); })
   ];
 }
 function rebuildShadow(p){
   const inset = p._inset ? p._inset + ', ' : '';
+  const oy = p._oy??10;
   const ob = p._oblur??28, oa = p._oalpha??.22;
-  p.style.boxShadow = inset + `0 10px ${ob}px rgba(0,0,0, ${oa})`;
+  p.style.boxShadow = inset + `0 ${oy}px ${ob}px rgba(0,0,0, ${oa})`;
 }
 // base glass sets
 function baseBlurSat(blur=10, sat=120){
@@ -201,18 +203,21 @@ CARDS.push({
   buildCSS: buildSimpleCSS
 });
 
-/* === 3 Dimmed === */
+/* === 3 Contrast === */
 CARDS.push({
-  id:'dim', title:'Dimmed Glass', key:'blur + brightness↓',
+  id:'contrast', title:'Contrast Glass', key:'blur · contrast · brightness',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.26)'; p._more='brightness(0.90)';
-    setBlurSat(p,14,115, p._more);
+    p._bgcol='13,14,35';
+    p._con=130; p._bri=90; p._more=`contrast(${p._con/100}) brightness(${p._bri/100})`;
+    p.style.backgroundColor='rgba(13,14,35,0.20)';
+    setBlurSat(p,14,120, p._more);
     p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
     p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
   },
   sliders:[
-    bgAlphaSlider(.26), ...baseBlurSat(14,115),
-    slider('Brightness %',60,120,1,90,'%',(p,v)=>{ p._more=`brightness(${v/100})`; setBlurSat(p, p._blur??14, p._sat??115, p._more); }),
+    bgAlphaSlider(.20), ...baseBlurSat(14,120),
+    slider('Contrast %',80,200,1,130,'%',(p,v)=>{ p._con=v; p._more=`contrast(${p._con/100}) brightness(${p._bri/100})`; setBlurSat(p,p._blur??14,p._sat??120,p._more); }),
+    slider('Brightness %',60,120,1,90,'%',(p,v)=>{ p._bri=v; p._more=`contrast(${p._con/100}) brightness(${p._bri/100})`; setBlurSat(p,p._blur??14,p._sat??120,p._more); }),
     borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22)
   ],
   buildCSS: buildSimpleCSS
@@ -360,21 +365,20 @@ CARDS.push({
   buildCSS: buildSimpleCSS
 });
 
-/* === 9 Inset Bevel === */
+/* === 9 Inner Glow === */
 CARDS.push({
-  id:'bevel', title:'Inset Bevel (4‑side)', key:'bevel px · light α · dark α',
+  id:'innerglow', title:'Inner Glow', key:'inset blur · glow α',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.16)'; setBlurSat(p,12,118);
-    p._px=2; p._la=.35; p._da=.30;
-    p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`;
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.16)'; setBlurSat(p,12,120);
+    p._glowBlur=14; p._glowA=.30; p._glowColor='255,255,255';
+    p._inset = `inset 0 0 ${p._glowBlur}px rgba(${p._glowColor},${p._glowA})`;
     p._oblur=24; p._oalpha=.22; rebuildShadow(p);
     p._bw=1; p._ba=.18; p.style.border='1px solid rgba(255,255,255,.18)';
   },
   sliders:[
-    bgAlphaSlider(.16), ...baseBlurSat(12,118),
-    slider('Bevel px',1,12,1,2,'px',(p,v)=>{ p._px=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    slider('Light α',.05,.8,.01,.35,'',(p,v)=>{ p._la=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    slider('Dark α',.05,.8,.01,.30,'',(p,v)=>{ p._da=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
+    bgAlphaSlider(.16), ...baseBlurSat(12,120),
+    slider('Glow blur px',0,60,1,14,'px',(p,v)=>{ p._glowBlur=v; p._inset=`inset 0 0 ${p._glowBlur}px rgba(${p._glowColor},${p._glowA})`; rebuildShadow(p); }),
+    slider('Glow α',0,1,.01,.30,'',(p,v)=>{ p._glowA=v; p._inset=`inset 0 0 ${p._glowBlur}px rgba(${p._glowColor},${p._glowA})`; rebuildShadow(p); }),
     ...outerShadowSliders(24,.22), borderWidthSlider(1), borderAlphaSlider(.18)
   ],
   buildCSS: buildSimpleCSS
@@ -402,95 +406,70 @@ CARDS.push({
   buildCSS: buildSimpleCSS
 });
 
-/* === 11 Neon Gradient Border === */
+/* === 11 Frosted Gradient Border === */
 CARDS.push({
-  id:'neon', title:'Neon Gradient Border', key:'gradient rim + glow',
+  id:'frostborder', title:'Frosted Gradient Border', key:'gradient rim',
   setup(p){
-    p._bgcol='13,14,35'; p.style.position='relative'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
-    p._bw=2; p._ba=0; p.style.border='2px solid transparent';
-    p._angle=135; p._glowBlur=14; p._glowA=.9;
-    p.style.backgroundImage='linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)';
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
+    p._bw=2; p._angle=45;
+    p.style.border='2px solid transparent';
+    p.style.backgroundImage='linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(45deg,#6ec3ff,#e0c3fc)';
     p.style.backgroundOrigin='border-box'; p.style.backgroundClip='padding-box, border-box';
-    const glow=el('div'); glow.className='neonGlow'; Object.assign(glow.style,{
-      position:'absolute', inset:'-2px', borderRadius:'inherit', pointerEvents:'none',
-      background:'linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)', filter:'blur(14px)', opacity:'0.9',
-      WebkitMask:'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-      WebkitMaskComposite:'xor', maskComposite:'exclude', padding:'2px'
-    }); p.appendChild(glow);
+    p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
   },
   sliders:[
     bgAlphaSlider(.12), ...baseBlurSat(12,120),
-    slider('Border width px',0,10,1,2,'px',(p,v)=>{ p._bw=v; p.style.borderWidth=v+'px'; const g=p.querySelector('.neonGlow'); g.style.inset = (-v)+'px'; g.style.padding = v+'px'; }),
-    slider('Glow blur px',0,60,1,14,'px',(p,v)=>{ p._glowBlur=v; p.querySelector('.neonGlow').style.filter=`blur(${v}px)`; }),
-    slider('Glow opacity',0,1,.01,.9,'',(p,v)=>{ p._glowA=v; p.querySelector('.neonGlow').style.opacity=String(v); }),
-    slider('Angle °',0,360,1,135,'deg',(p,v)=>{ p._angle=v; p.style.backgroundImage=`linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; p.querySelector('.neonGlow').style.background=`linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; })
+    slider('Border width px',0,10,1,2,'px',(p,v)=>{ p._bw=v; p.style.borderWidth=v+'px'; p.style.backgroundOrigin='border-box'; p.style.backgroundClip='padding-box, border-box'; }),
+    slider('Angle °',0,360,1,45,'deg',(p,v)=>{ p._angle=v; p.style.backgroundImage=`linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${v}deg,#6ec3ff,#e0c3fc)`; }),
+    ...outerShadowSliders(28,.22)
   ],
   buildCSS(p){
     const mainCss = [];
     writeBaseCSS(p,mainCss);
-    mainCss.push(`background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${p._angle}deg,#00ffd5,#7a5cff,#ff00e6);`);
+    mainCss.push(`background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${p._angle}deg,#6ec3ff,#e0c3fc);`);
     mainCss.push(`background-origin: border-box;`);
     mainCss.push(`background-clip: padding-box, border-box;`);
-
-    const s = getComputedStyle(p.querySelector('.neonGlow'));
-    const pseudoCss = [
-      'content: ""',
-      'position: absolute',
-      `inset: -${p._bw}px`,
-      'pointer-events: none',
-      'border-radius: inherit',
-      `padding: ${p._bw}px`,
-      `opacity: ${p._glowA}`,
-      `background: ${s.background}`,
-      `filter: blur(${p._glowBlur}px)`,
-      '-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-      '-webkit-mask-composite: xor',
-      'mask-composite: exclude'
-    ];
-
     const finalCss = [
       `.your-selector {`,
       ...mainCss.map(line => `  ${line}`),
-      `}`,
-      ``,
-      `.your-selector::after {`,
-      ...pseudoCss.map(line => `  ${line}`),
       `}`
     ];
     return finalCss.join('\n');
   }
 });
 
-/* === 12 Duotone Prism Edge === */
+/* === 12 Liquid Spotlight === */
 CARDS.push({
-  id:'duoprism', title:'Duotone Prism Edge', key:'two inner rims',
+  id:'spotlight', title:'Liquid Spotlight', key:'radial glow · position',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,125);
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
+    const fx=el('div'); fx.className='spotFx'; p.appendChild(fx);
+    function paint(){ Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
+      background:`radial-gradient(circle at ${p._x}% ${p._y}%, rgba(255,255,255,${p._spotA}) 0%, rgba(255,255,255,0) ${p._r}%)`
+    }); }
+    p._x=50; p._y=50; p._r=60; p._spotA=.30; p._paint=paint; paint();
+    p._inset=''; p._oblur=26; p._oalpha=.20; rebuildShadow(p);
     p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
-    p._oblur=26; p._oalpha=.20; rebuildShadow(p);
-    p._rimThk=2; p._cA=.55; p._mA=.55;
-    const rim=el('div'); rim.className='duoRim'; p.appendChild(rim);
-    function paint(){ rim.style.position='absolute'; rim.style.inset='0'; rim.style.pointerEvents='none'; rim.style.borderRadius='inherit';
-      rim.style.boxShadow=`inset 0 0 0 1px rgba(0,255,255,${p._cA}), inset 0 0 0 ${p._rimThk}px rgba(255,0,255,${p._mA})`; }
-    p._paintRim=paint; paint();
   },
   sliders:[
-    bgAlphaSlider(.12), ...baseBlurSat(12,125),
-    slider('Rim thickness px',1,10,1,2,'px',(p,v)=>{ p._rimThk=v; p._paintRim(); }),
-    slider('Cyan α',0,1,.01,.55,'',(p,v)=>{ p._cA=v; p._paintRim(); }),
-    slider('Magenta α',0,1,.01,.55,'',(p,v)=>{ p._mA=v; p._paintRim(); }),
+    bgAlphaSlider(.12), ...baseBlurSat(12,120),
+    slider('Spot α',0,1,.01,.30,'',(p,v)=>{ p._spotA=v; p._paint(); }),
+    slider('Radius %',10,100,1,60,'%',(p,v)=>{ p._r=v; p._paint(); }),
+    slider('Center X %',0,100,1,50,'%',(p,v)=>{ p._x=v; p._paint(); }),
+    slider('Center Y %',0,100,1,50,'%',(p,v)=>{ p._y=v; p._paint(); }),
     ...outerShadowSliders(26,.20), borderWidthSlider(1), borderAlphaSlider(.10)
   ],
   buildCSS(p){
     return buildOverlayCSS(p, 'after', (p) => {
-      const s = getComputedStyle(p.querySelector('.duoRim'));
+      const s = getComputedStyle(p.querySelector('.spotFx'));
       return [
         'content: ""',
         'position: absolute',
         'inset: 0',
         'pointer-events: none',
         'border-radius: inherit',
-        `box-shadow: ${s.boxShadow}`
+        `background: ${s.backgroundImage || s.background}`
       ];
     });
   }
