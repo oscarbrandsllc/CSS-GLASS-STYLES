@@ -110,7 +110,7 @@ function writeBaseCSS(p, out){
   if(cs.borderTopStyle !== 'none' && cs.borderTopWidth !== '0px'){
     emit(out, `border: ${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor};`);
   }
-  emit(out, `border-radius: 10px;`);
+  if(cs.borderRadius && cs.borderRadius !== '0px') emit(out, `border-radius: ${cs.borderRadius};`);
   if(cs.boxShadow && cs.boxShadow !== 'none') emit(out, `box-shadow: ${cs.boxShadow};`);
 }
 
@@ -148,6 +148,7 @@ function buildOverlayCSS(p, pseudo, getPseudoStyles){
 function slider(label, min, max, step, value, unit, apply){ return {label,min,max,step,value,unit,apply}; }
 function borderWidthSlider(init=1){ return slider('Border px',0,6,1,init,'px',(p,v)=>{ const a=parseFloat(p._ba??0.12); p.style.border=`${v}px solid rgba(255,255,255,${a})`; p._bw=v; }); }
 function borderAlphaSlider(init=0.12){ return slider('Border α',0,.8,.01,init,'',(p,v)=>{ const w=parseInt(p._bw??1,10); p.style.border=`${w}px solid rgba(255,255,255,${v})`; p._ba=v; }); }
+function borderRadiusSlider(init=10){ return slider('Radius px',0,50,1,init,'px',(p,v)=>{ p.style.borderRadius=v+'px'; }); }
 function outerShadowSliders(initBlur=28, initA=.22){
   return [
     slider('Shadow blur px',0,60,1,initBlur,'px',(p,v)=>{ p._oblur=v; rebuildShadow(p); }),
@@ -180,7 +181,7 @@ CARDS.push({
     p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
     p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
   },
-  sliders:[ bgAlphaSlider(.10), ...baseBlurSat(6,110), borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22) ],
+  sliders:[ borderRadiusSlider(10), bgAlphaSlider(.10), ...baseBlurSat(6,110), borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22) ],
   buildCSS: buildSimpleCSS
 });
 
@@ -194,6 +195,7 @@ CARDS.push({
     p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
   },
   sliders:[
+    borderRadiusSlider(10),
     bgAlphaSlider(.12), ...baseBlurSat(12,125),
     slider('Brightness %',90,160,1,108,'%',(p,v)=>{ p._more=`brightness(${v/100})`; setBlurSat(p, p._blur??12, p._sat??125, p._more); }),
     borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22)
@@ -201,21 +203,38 @@ CARDS.push({
   buildCSS: buildSimpleCSS
 });
 
-/* === 3 Dimmed === */
+/* === 3 iOS Liquid === */
 CARDS.push({
-  id:'dim', title:'Dimmed Glass', key:'blur + brightness↓',
+  id:'liquid', title:'iOS Liquid', key:'blur · saturate · highlight',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.26)'; p._more='brightness(0.90)';
-    setBlurSat(p,14,115, p._more);
+    p._bgcol='20,20,40'; p.style.backgroundColor='rgba(20,20,40,0.15)'; setBlurSat(p,20,180);
     p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
-    p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
+    p._bw=1; p._ba=.18; p.style.border='1px solid rgba(255,255,255,.18)';
+    const fx=el('div'); fx.className='liquidLight'; Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
+      background:'radial-gradient(circle at 25% 25%, rgba(255,255,255,.25), rgba(255,255,255,0) 60%)',
+      mixBlendMode:'overlay'
+    }); p.appendChild(fx);
   },
   sliders:[
-    bgAlphaSlider(.26), ...baseBlurSat(14,115),
-    slider('Brightness %',60,120,1,90,'%',(p,v)=>{ p._more=`brightness(${v/100})`; setBlurSat(p, p._blur??14, p._sat??115, p._more); }),
-    borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22)
+    borderRadiusSlider(10), bgAlphaSlider(.15), ...baseBlurSat(20,180),
+    slider('Highlight α',0,.5,.01,.25,'',(p,v)=>{ p.querySelector('.liquidLight').style.background=`radial-gradient(circle at 25% 25%, rgba(255,255,255,${v}), rgba(255,255,255,0) 60%)`; }),
+    borderWidthSlider(1), borderAlphaSlider(.18), ...outerShadowSliders(28,.22)
   ],
-  buildCSS: buildSimpleCSS
+  buildCSS(p){
+    return buildOverlayCSS(p,'after',(p)=>{
+      const s=getComputedStyle(p.querySelector('.liquidLight'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `background: ${s.background}`,
+        'mix-blend-mode: overlay'
+      ];
+    });
+  }
 });
 
 /* === 4 Acrylic === */
@@ -232,6 +251,7 @@ CARDS.push({
     }); p.appendChild(fx);
   },
   sliders:[
+    borderRadiusSlider(10),
     bgAlphaSlider(.06), ...baseBlurSat(8,130),
     slider('Noise α',0,.12,.001,.03,'',(p,v)=>{ p.querySelector('.noise').style.backgroundImage=`radial-gradient(rgba(255,255,255,${v}) 1px, transparent 1px)`; }),
     slider('Noise size px',1,8,1,2,'px',(p,v)=>{ p.querySelector('.noise').style.backgroundSize=`${v}px ${v}px`; }),
@@ -267,6 +287,7 @@ CARDS.push({
     }); p.appendChild(fx);
   },
   sliders:[
+    borderRadiusSlider(10),
     bgAlphaSlider(.10), ...baseBlurSat(10,120),
     slider('Grain opacity',0,1,.01,.7,'',(p,v)=>{ p.querySelector('.paperFx').style.opacity=String(v); }),
     slider('Grain size px',1,8,1,1,'px',(p,v)=>{ p.querySelector('.paperFx').style.backgroundSize=`${v}px ${v}px, ${v*2}px ${v*2}px`; }),
@@ -304,6 +325,7 @@ CARDS.push({
     p._sheenAngle=180; p._sheenStop=35; p._sheenA=.18; p._paint=paint; paint();
   },
   sliders:[
+    borderRadiusSlider(10),
     bgAlphaSlider(.12), ...baseBlurSat(12,120),
     slider('Sheen α',0,.6,.01,.18,'',(p,v)=>{ p._sheenA=v; p._paint(); }),
     slider('Sheen stop %',10,80,1,35,'%',(p,v)=>{ p._sheenStop=v; p._paint(); }),
@@ -336,6 +358,7 @@ CARDS.push({
     p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
   },
   sliders:[
+    borderRadiusSlider(10),
     ...baseBlurSat(12,120),
     slider('Tint hue °',0,360,1,270,'deg',(p,v)=>{ p._h=v; p.style.backgroundColor=`hsla(${p._h},70%,45%,${p._tinta})`; }),
     slider('Tint α',0,.6,.01,.18,'',(p,v)=>{ p._tinta=v; p.style.backgroundColor=`hsla(${p._h},70%,45%,${p._tinta})`; }),
@@ -353,6 +376,7 @@ CARDS.push({
     p._bw=1; p._ba=.22; p.style.border='1px solid rgba(255,255,255,.22)';
   },
   sliders:[
+    borderRadiusSlider(10),
     ...baseBlurSat(14,120),
     slider('Frost α',0,.6,.01,.16,'',(p,v)=>{ p._fA=v; p.style.backgroundColor=`rgba(255,255,255,${p._fA})`; }),
     borderWidthSlider(1), borderAlphaSlider(.22), ...outerShadowSliders(32,.22)
@@ -360,24 +384,37 @@ CARDS.push({
   buildCSS: buildSimpleCSS
 });
 
-/* === 9 Inset Bevel === */
+/* === 9 Vanta Glow === */
 CARDS.push({
-  id:'bevel', title:'Inset Bevel (4‑side)', key:'bevel px · light α · dark α',
+  id:'vanta', title:'Vanta Glow', key:'inner shadow + glow rim',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.16)'; setBlurSat(p,12,118);
-    p._px=2; p._la=.35; p._da=.30;
-    p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`;
-    p._oblur=24; p._oalpha=.22; rebuildShadow(p);
-    p._bw=1; p._ba=.18; p.style.border='1px solid rgba(255,255,255,.18)';
+    p._bgcol='8,9,20'; p.style.backgroundColor='rgba(8,9,20,0.25)'; setBlurSat(p,16,110);
+    p._inset=''; p._oblur=32; p._oalpha=.4; rebuildShadow(p);
+    p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
+    const glow=el('div'); glow.className='vantaGlow'; Object.assign(glow.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
+      boxShadow:'0 0 20px rgba(0,136,255,.6)'
+    }); p.appendChild(glow);
   },
   sliders:[
-    bgAlphaSlider(.16), ...baseBlurSat(12,118),
-    slider('Bevel px',1,12,1,2,'px',(p,v)=>{ p._px=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    slider('Light α',.05,.8,.01,.35,'',(p,v)=>{ p._la=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    slider('Dark α',.05,.8,.01,.30,'',(p,v)=>{ p._da=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
-    ...outerShadowSliders(24,.22), borderWidthSlider(1), borderAlphaSlider(.18)
+    borderRadiusSlider(10), bgAlphaSlider(.25), ...baseBlurSat(16,110),
+    slider('Glow blur px',0,60,1,20,'px',(p,v)=>{ p._gpx=v; p.querySelector('.vantaGlow').style.boxShadow=`0 0 ${v}px rgba(0,136,255,${p._ga??.6})`; }),
+    slider('Glow α',0,1,.01,.6,'',(p,v)=>{ p._ga=v; const g=p.querySelector('.vantaGlow'); g.style.boxShadow=`0 0 ${p._gpx??20}px rgba(0,136,255,${v})`; }),
+    borderWidthSlider(1), borderAlphaSlider(.10), ...outerShadowSliders(32,.4)
   ],
-  buildCSS: buildSimpleCSS
+  buildCSS(p){
+    return buildOverlayCSS(p,'after',(p)=>{
+      const s=getComputedStyle(p.querySelector('.vantaGlow'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `box-shadow: ${s.boxShadow}`
+      ];
+    });
+  }
 });
 
 /* === 10 Double Glass === */
@@ -392,6 +429,7 @@ CARDS.push({
     p._bw=0; p._ba=.12; p.style.border='0px solid rgba(255,255,255,.12)';
   },
   sliders:[
+    borderRadiusSlider(10),
     bgAlphaSlider(.14), ...baseBlurSat(12,120),
     slider('Outer rim px',0,30,1,12,'px',(p,v)=>{ p._outerPx=v; p._inset = p._rims(); rebuildShadow(p); }),
     slider('Outer α',0,.6,.01,.20,'',(p,v)=>{ p._r1=v; p._inset = p._rims(); rebuildShadow(p); }),
@@ -402,95 +440,76 @@ CARDS.push({
   buildCSS: buildSimpleCSS
 });
 
-/* === 11 Neon Gradient Border === */
+/* === 11 Liquid Gradient Rim === */
 CARDS.push({
-  id:'neon', title:'Neon Gradient Border', key:'gradient rim + glow',
+  id:'liqRim', title:'Liquid Gradient Rim', key:'soft gradient border',
   setup(p){
-    p._bgcol='13,14,35'; p.style.position='relative'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
-    p._bw=2; p._ba=0; p.style.border='2px solid transparent';
-    p._angle=135; p._glowBlur=14; p._glowA=.9;
-    p.style.backgroundImage='linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)';
-    p.style.backgroundOrigin='border-box'; p.style.backgroundClip='padding-box, border-box';
-    const glow=el('div'); glow.className='neonGlow'; Object.assign(glow.style,{
-      position:'absolute', inset:'-2px', borderRadius:'inherit', pointerEvents:'none',
-      background:'linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)', filter:'blur(14px)', opacity:'0.9',
-      WebkitMask:'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-      WebkitMaskComposite:'xor', maskComposite:'exclude', padding:'2px'
-    }); p.appendChild(glow);
+    p._bgcol='16,17,40'; p.style.backgroundColor='rgba(16,17,40,0.15)'; setBlurSat(p,20,180);
+    p._bw=1; p._ba=.08; p.style.border='1px solid rgba(255,255,255,.08)';
+    const rim=el('div'); rim.className='liqRim'; p._angle=135;
+    Object.assign(rim.style,{
+      position:'absolute', inset:'0', padding:'1px', borderRadius:'inherit', pointerEvents:'none',
+      background:`linear-gradient(${p._angle}deg,#4dd0e1,#9575cd,#ff4081)`,
+      WebkitMask:'linear-gradient(#fff,#fff) content-box, linear-gradient(#fff,#fff)',
+      WebkitMaskComposite:'xor', maskComposite:'exclude',
+      filter:'blur(12px)'
+    }); p.appendChild(rim);
   },
   sliders:[
-    bgAlphaSlider(.12), ...baseBlurSat(12,120),
-    slider('Border width px',0,10,1,2,'px',(p,v)=>{ p._bw=v; p.style.borderWidth=v+'px'; const g=p.querySelector('.neonGlow'); g.style.inset = (-v)+'px'; g.style.padding = v+'px'; }),
-    slider('Glow blur px',0,60,1,14,'px',(p,v)=>{ p._glowBlur=v; p.querySelector('.neonGlow').style.filter=`blur(${v}px)`; }),
-    slider('Glow opacity',0,1,.01,.9,'',(p,v)=>{ p._glowA=v; p.querySelector('.neonGlow').style.opacity=String(v); }),
-    slider('Angle °',0,360,1,135,'deg',(p,v)=>{ p._angle=v; p.style.backgroundImage=`linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; p.querySelector('.neonGlow').style.background=`linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; })
+    borderRadiusSlider(10), bgAlphaSlider(.15), ...baseBlurSat(20,180),
+    slider('Rim blur px',0,40,1,12,'px',(p,v)=>{ p.querySelector('.liqRim').style.filter=`blur(${v}px)`; }),
+    slider('Angle °',0,360,1,135,'deg',(p,v)=>{ p._angle=v; p.querySelector('.liqRim').style.background=`linear-gradient(${v}deg,#4dd0e1,#9575cd,#ff4081)`; }),
+    borderWidthSlider(1), borderAlphaSlider(.08), ...outerShadowSliders(28,.22)
   ],
   buildCSS(p){
-    const mainCss = [];
-    writeBaseCSS(p,mainCss);
-    mainCss.push(`background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${p._angle}deg,#00ffd5,#7a5cff,#ff00e6);`);
-    mainCss.push(`background-origin: border-box;`);
-    mainCss.push(`background-clip: padding-box, border-box;`);
-
-    const s = getComputedStyle(p.querySelector('.neonGlow'));
-    const pseudoCss = [
-      'content: ""',
-      'position: absolute',
-      `inset: -${p._bw}px`,
-      'pointer-events: none',
-      'border-radius: inherit',
-      `padding: ${p._bw}px`,
-      `opacity: ${p._glowA}`,
-      `background: ${s.background}`,
-      `filter: blur(${p._glowBlur}px)`,
-      '-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-      '-webkit-mask-composite: xor',
-      'mask-composite: exclude'
-    ];
-
-    const finalCss = [
-      `.your-selector {`,
-      ...mainCss.map(line => `  ${line}`),
-      `}`,
-      ``,
-      `.your-selector::after {`,
-      ...pseudoCss.map(line => `  ${line}`),
-      `}`
-    ];
-    return finalCss.join('\n');
+    return buildOverlayCSS(p,'before',(p)=>{
+      const s=getComputedStyle(p.querySelector('.liqRim'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'padding: 1px',
+        'border-radius: inherit',
+        'pointer-events: none',
+        `background: ${s.background}`,
+        '-webkit-mask: linear-gradient(#fff,#fff) content-box, linear-gradient(#fff,#fff)',
+        '-webkit-mask-composite: xor',
+        'mask-composite: exclude',
+        `filter: ${s.filter}`
+      ];
+    });
   }
 });
 
-/* === 12 Duotone Prism Edge === */
+/* === 12 Liquid Reflection === */
 CARDS.push({
-  id:'duoprism', title:'Duotone Prism Edge', key:'two inner rims',
+  id:'reflection', title:'Liquid Reflection', key:'specular top glare',
   setup(p){
-    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,125);
+    p._bgcol='18,20,40'; p.style.backgroundColor='rgba(18,20,40,0.18)'; setBlurSat(p,18,160);
+    p._inset=''; p._oblur=26; p._oalpha=.22; rebuildShadow(p);
     p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
-    p._oblur=26; p._oalpha=.20; rebuildShadow(p);
-    p._rimThk=2; p._cA=.55; p._mA=.55;
-    const rim=el('div'); rim.className='duoRim'; p.appendChild(rim);
-    function paint(){ rim.style.position='absolute'; rim.style.inset='0'; rim.style.pointerEvents='none'; rim.style.borderRadius='inherit';
-      rim.style.boxShadow=`inset 0 0 0 1px rgba(0,255,255,${p._cA}), inset 0 0 0 ${p._rimThk}px rgba(255,0,255,${p._mA})`; }
-    p._paintRim=paint; paint();
+    const fx=el('div'); fx.className='reflection'; Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
+      background:'linear-gradient(115deg, rgba(255,255,255,.3), rgba(255,255,255,0) 60%)',
+      mixBlendMode:'screen'
+    }); p.appendChild(fx);
   },
   sliders:[
-    bgAlphaSlider(.12), ...baseBlurSat(12,125),
-    slider('Rim thickness px',1,10,1,2,'px',(p,v)=>{ p._rimThk=v; p._paintRim(); }),
-    slider('Cyan α',0,1,.01,.55,'',(p,v)=>{ p._cA=v; p._paintRim(); }),
-    slider('Magenta α',0,1,.01,.55,'',(p,v)=>{ p._mA=v; p._paintRim(); }),
-    ...outerShadowSliders(26,.20), borderWidthSlider(1), borderAlphaSlider(.10)
+    borderRadiusSlider(10), bgAlphaSlider(.18), ...baseBlurSat(18,160),
+    slider('Reflection α',0,.6,.01,.3,'',(p,v)=>{ p.querySelector('.reflection').style.background=`linear-gradient(115deg, rgba(255,255,255,${v}), rgba(255,255,255,0) 60%)`; }),
+    borderWidthSlider(1), borderAlphaSlider(.10), ...outerShadowSliders(26,.22)
   ],
   buildCSS(p){
-    return buildOverlayCSS(p, 'after', (p) => {
-      const s = getComputedStyle(p.querySelector('.duoRim'));
+    return buildOverlayCSS(p,'after',(p)=>{
+      const s=getComputedStyle(p.querySelector('.reflection'));
       return [
         'content: ""',
         'position: absolute',
         'inset: 0',
         'pointer-events: none',
         'border-radius: inherit',
-        `box-shadow: ${s.boxShadow}`
+        `background: ${s.background}`,
+        'mix-blend-mode: screen'
       ];
     });
   }
@@ -510,6 +529,7 @@ CARDS.push({
     p._cx=50;p._cy=50;p._dot=2;p._gap=10;p._op=.35; p._paint=paint; paint();
   },
   sliders:[
+    borderRadiusSlider(10),
     bgAlphaSlider(.14), ...baseBlurSat(10,120),
     slider('Rings α',0,1,.01,.35,'',(p,v)=>{ p._op=v; p._paint(); }),
     slider('Center X %',0,100,1,50,'%',(p,v)=>{ p._cx=v; p._paint(); }),
@@ -548,6 +568,7 @@ CARDS.push({
     p._ang=20;p._line=1;p._gap=6;p._op=.35; p._paint=paint; paint();
   },
   sliders:[
+    borderRadiusSlider(10),
     bgAlphaSlider(.14), ...baseBlurSat(10,120),
     slider('Scratch α',0,1,.01,.35,'',(p,v)=>{ p._op=v; p._paint(); }),
     slider('Angle °',0,180,1,20,'deg',(p,v)=>{ p._ang=v; p._paint(); }),
@@ -585,6 +606,7 @@ CARDS.push({
     p._ang=130;p._op=.55; p._paint=paint; paint();
   },
   sliders:[
+    borderRadiusSlider(10),
     bgAlphaSlider(.12), ...baseBlurSat(12,120),
     slider('Overlay α',0,1,.01,.55,'',(p,v)=>{ p._op=v; p._paint(); }),
     slider('Angle °',0,360,1,130,'deg',(p,v)=>{ p._ang=v; p._paint(); }),
