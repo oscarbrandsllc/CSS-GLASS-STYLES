@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Glass Lab — 15 Styles · transparent panels · paste‑ready CSS</title>
+<style>
+  :root{--ink:#e9ebff;--muted:#a6add4}
+  html,body{height:100%}
+  body{
+    margin:0;color:var(--ink);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    background: radial-gradient(ellipse at 50% 50%, #1B2735 0%, #090A0F 100%);
+    position:relative;
+  }
+  /* starfield */
+  .stars,.stars:after,.stars2,.stars2:after,.stars3,.stars3:after{position:fixed;left:0;top:0;width:1px;height:1px;background:transparent;pointer-events:none}
+  .stars{box-shadow: var(--shadows-small); animation: animStar 50s linear infinite;}
+  .stars:after{content:""; top:2000px; box-shadow: var(--shadows-small);}
+  .stars2{width:2px;height:2px; box-shadow: var(--shadows-medium); animation: animStar 100s linear infinite;}
+  .stars2:after{content:""; top:2000px; box-shadow: var(--shadows-medium);}
+  .stars3{width:3px;height:3px; box-shadow: var(--shadows-big); animation: animStar 150s linear infinite;}
+  .stars3:after{content:""; top:2000px; box-shadow: var(--shadows-big);}
+  @keyframes animStar{from{transform:translateY(0)}to{transform:translateY(-2000px)}}
+
+  header{
+    position: sticky; top:0; z-index:5;
+    background: linear-gradient(180deg, rgba(10,11,22,.86), rgba(10,11,22,.55) 60%, rgba(10,11,22,0));
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    backdrop-filter: blur(10px) saturate(120%);
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .wrap{max-width:1280px;margin:0 auto;padding:14px 18px}
+  h1{font-size:18px;letter-spacing:.3px;margin:0}
+  .grid{max-width:1280px;margin:24px auto 64px;padding:0 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:18px}
+
+  /* ── PANEL / CONTAINER — transparent, no blur here ── */
+  .card{
+        position:relative;border-radius:10px;overflow:hidden;
+        background: rgba(13,14,35,0.01);                 /* nearly see-through */
+        border: 1px solid rgba(255,255,255,.06);
+        /* no backdrop-filter here — it interferes with previews' blur slider */
+        box-shadow: 0 6px 18px rgba(0,0,0,.12);
+  }
+  .card .bar{display:flex;align-items:center;gap:8px;padding:10px 12px;
+             background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,0));
+             font-weight:700;font-size:14px}
+  .card .sub{padding:0 12px 6px;color:var(--muted);font-size:12px}
+
+  /* Preview area (the actual “glass” demo) */
+  .preview{min-height:240px;border-top:1px dashed rgba(255,255,255,.12);border-bottom:1px dashed rgba(255,255,255,.12);
+           margin:8px 12px;border-radius:10px;position:relative;overflow:hidden}
+
+  /* Slider panel */
+  .controls{background:transparent}
+  .ctl{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:6px 12px}
+  .ctl label{font-size:12px;color:var(--muted)}
+  .ctl input[type=range]{width:100%}
+
+  pre.code{margin:8px 12px 12px;padding:10px;background:rgba(0,0,0,.16);
+           border-radius:10px;border:1px solid rgba(255,255,255,.08);font-size:11px;color:#f4f5ff;overflow:auto;max-height:250px;white-space:pre-wrap}
+  .btns{display:flex;gap:8px;margin:0 12px 14px}
+  button.btn{padding:8px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;cursor:pointer}
+
+  .err{padding:10px 12px;color:#ffb4b4}
+</style>
+</head>
+<body>
+<div class="stars"></div><div class="stars2"></div><div class="stars3"></div>
+<header><div class="wrap"><h1>Glass Lab — 15 Styles · transparent panels · paste‑ready CSS</h1></div></header>
+<main class="grid" id="grid"></main>
+
+<script>
+// starfield scatters
+function randomShadows(n){const a=[];for(let i=0;i<n;i++){a.push(Math.floor(Math.random()*2000)+'px '+Math.floor(Math.random()*2000)+'px #FFF')}return a.join(', ')}
+document.documentElement.style.setProperty('--shadows-small', randomShadows(700));
+document.documentElement.style.setProperty('--shadows-medium', randomShadows(200));
+document.documentElement.style.setProperty('--shadows-big', randomShadows(100));
+
+// helpers
+const $ = (s,root=document)=>root.querySelector(s);
+const el = (t,c)=>{const e=document.createElement(t); if(c) e.className=c; return e;};
+function emit(out,line){ out.push(line); }
+function block(lines){ return lines.join('\n'); }
+function setBlurSat(node, blurPx, satPct, more=''){
+  const bf = `blur(${blurPx}px) saturate(${satPct}%) ${more}`.trim();
+  node.style.backdropFilter = bf;
+  node.style.webkitBackdropFilter = bf;
+}
+async function copyText(text, btn){
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+    }else{
+      const ta=document.createElement('textarea');
+      ta.value=text; document.body.appendChild(ta);
+      ta.style.position='fixed'; ta.style.left='-9999px';
+      ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    if(btn){ const t=btn.textContent; btn.textContent='Copied!'; setTimeout(()=>btn.textContent=t,900); }
+  }catch(e){ if(btn){ btn.textContent='Copy failed'; setTimeout(()=>btn.textContent='Copy',1200);} console.error(e); }
+}
+
+// CSS writer (paste‑ready)
+function writeBaseCSS(p, out){
+  const cs = getComputedStyle(p);
+  if(cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)') emit(out, `background-color: ${cs.backgroundColor};`);
+  if(cs.webkitBackdropFilter) emit(out, `-webkit-backdrop-filter: ${cs.webkitBackdropFilter};`);
+  if(cs.backdropFilter) emit(out, `backdrop-filter: ${cs.backdropFilter};`);
+  if(cs.borderTopStyle !== 'none' && cs.borderTopWidth !== '0px'){
+    emit(out, `border: ${cs.borderTopWidth} ${cs.borderTopStyle} ${cs.borderTopColor};`);
+  }
+  emit(out, `border-radius: 10px;`);
+  if(cs.boxShadow && cs.boxShadow !== 'none') emit(out, `box-shadow: ${cs.boxShadow};`);
+}
+
+function buildSimpleCSS(p){
+  const mainCss = [];
+  writeBaseCSS(p, mainCss);
+  const finalCss = [
+    `.your-selector {`,
+    ...mainCss.map(line => `  ${line}`),
+    `}`
+  ];
+  return finalCss.join('\n');
+}
+
+function buildOverlayCSS(p, pseudo, getPseudoStyles){
+  const mainCss = [];
+  writeBaseCSS(p, mainCss);
+  mainCss.unshift('position: relative;');
+
+  const pseudoCss = getPseudoStyles(p);
+
+  const finalCss = [
+    `.your-selector {`,
+    ...mainCss.map(line => `  ${line}`),
+    `}`,
+    ``,
+    `.your-selector::${pseudo} {`,
+    ...pseudoCss.map(line => `  ${line}`),
+    `}`
+  ];
+  return finalCss.join('\n');
+}
+
+// slider helpers
+function slider(label, min, max, step, value, unit, apply){ return {label,min,max,step,value,unit,apply}; }
+function borderWidthSlider(init=1){ return slider('Border px',0,6,1,init,'px',(p,v)=>{ const a=parseFloat(p._ba??0.12); p.style.border=`${v}px solid rgba(255,255,255,${a})`; p._bw=v; }); }
+function borderAlphaSlider(init=0.12){ return slider('Border α',0,.8,.01,init,'',(p,v)=>{ const w=parseInt(p._bw??1,10); p.style.border=`${w}px solid rgba(255,255,255,${v})`; p._ba=v; }); }
+function outerShadowSliders(initBlur=28, initA=.22){
+  return [
+    slider('Shadow blur px',0,60,1,initBlur,'px',(p,v)=>{ p._oblur=v; rebuildShadow(p); }),
+    slider('Outer shadow α',0,1,.01,initA,'',(p,v)=>{ p._oalpha=v; rebuildShadow(p); })
+  ];
+}
+function rebuildShadow(p){
+  const inset = p._inset ? p._inset + ', ' : '';
+  const ob = p._oblur??28, oa = p._oalpha??.22;
+  p.style.boxShadow = inset + `0 10px ${ob}px rgba(0,0,0, ${oa})`;
+}
+// base glass sets
+function baseBlurSat(blur=10, sat=120){
+  return [
+    slider('Blur px',0,30,1,blur,'px',(p,v)=>{ const s=parseInt(p._sat??sat,10); const more=p._more||''; setBlurSat(p,v,s,more); p._blur=v; }),
+    slider('Saturate %',60,260,1,sat,'%',(p,v)=>{ const b=parseInt(p._blur??blur,10); const more=p._more||''; p._sat=v; setBlurSat(p,b,v,more); })
+  ];
+}
+function bgAlphaSlider(initA=0.12){
+  return slider('BG α',0,.6,.01,initA,'',(p,v)=>{ const col=p._bgcol || '13,14,35'; p.style.backgroundColor=`rgba(${col},${v})`; });
+}
+
+const CARDS=[];
+
+/* === 1 Soft === */
+CARDS.push({
+  id:'soft', title:'Soft Glass', key:'blur · saturate · base α',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.10)'; setBlurSat(p,6,110);
+    p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
+    p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
+  },
+  sliders:[ bgAlphaSlider(.10), ...baseBlurSat(6,110), borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22) ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 2 Bright === */
+CARDS.push({
+  id:'bright', title:'Bright Glass', key:'blur + brightness↑',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; p._more='brightness(1.08)';
+    setBlurSat(p,12,125, p._more);
+    p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
+    p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
+  },
+  sliders:[
+    bgAlphaSlider(.12), ...baseBlurSat(12,125),
+    slider('Brightness %',90,160,1,108,'%',(p,v)=>{ p._more=`brightness(${v/100})`; setBlurSat(p, p._blur??12, p._sat??125, p._more); }),
+    borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22)
+  ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 3 Dimmed === */
+CARDS.push({
+  id:'dim', title:'Dimmed Glass', key:'blur + brightness↓',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.26)'; p._more='brightness(0.90)';
+    setBlurSat(p,14,115, p._more);
+    p._inset=''; p._oblur=28; p._oalpha=.22; rebuildShadow(p);
+    p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
+  },
+  sliders:[
+    bgAlphaSlider(.26), ...baseBlurSat(14,115),
+    slider('Brightness %',60,120,1,90,'%',(p,v)=>{ p._more=`brightness(${v/100})`; setBlurSat(p, p._blur??14, p._sat??115, p._more); }),
+    borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(28,.22)
+  ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 4 Acrylic === */
+CARDS.push({
+  id:'acrylic', title:'Acrylic', key:'blur · saturate · dotted noise',
+  setup(p){
+    p._bgcol='20,28,58'; p.style.backgroundColor='rgba(20,28,58,0.06)'; setBlurSat(p,8,130);
+    p._inset=''; p._oblur=30; p._oalpha=.22; rebuildShadow(p);
+    p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
+    const fx=el('div'); fx.className='noise'; Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
+      backgroundImage:'radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)',
+      backgroundSize:'2px 2px'
+    }); p.appendChild(fx);
+  },
+  sliders:[
+    bgAlphaSlider(.06), ...baseBlurSat(8,130),
+    slider('Noise α',0,.12,.001,.03,'',(p,v)=>{ p.querySelector('.noise').style.backgroundImage=`radial-gradient(rgba(255,255,255,${v}) 1px, transparent 1px)`; }),
+    slider('Noise size px',1,8,1,2,'px',(p,v)=>{ p.querySelector('.noise').style.backgroundSize=`${v}px ${v}px`; }),
+    borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(30,.22)
+  ],
+  buildCSS(p){
+    return buildOverlayCSS(p, 'after', (p) => {
+      const s = getComputedStyle(p.querySelector('.noise'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `background-image: ${s.backgroundImage}`,
+        `background-size: ${s.backgroundSize}`
+      ];
+    });
+  }
+});
+
+/* === 5 Paper Noise === */
+CARDS.push({
+  id:'paper', title:'Paper Noise', key:'dual grain overlay',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.10)'; setBlurSat(p,10,120);
+    p._inset=''; p._oblur=30; p._oalpha=.20; rebuildShadow(p);
+    p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
+    const fx=el('div'); fx.className='paperFx'; Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
+      backgroundImage:'radial-gradient(rgba(255,255,255,.03) 1px, transparent 1px), radial-gradient(rgba(0,0,0,.06) 1px, transparent 1px)',
+      backgroundSize:'1px 1px, 2px 2px',opacity:'0.7'
+    }); p.appendChild(fx);
+  },
+  sliders:[
+    bgAlphaSlider(.10), ...baseBlurSat(10,120),
+    slider('Grain opacity',0,1,.01,.7,'',(p,v)=>{ p.querySelector('.paperFx').style.opacity=String(v); }),
+    slider('Grain size px',1,8,1,1,'px',(p,v)=>{ p.querySelector('.paperFx').style.backgroundSize=`${v}px ${v}px, ${v*2}px ${v*2}px`; }),
+    borderWidthSlider(1), borderAlphaSlider(.10), ...outerShadowSliders(30,.20)
+  ],
+  buildCSS(p){
+    return buildOverlayCSS(p, 'after', (p) => {
+      const s = getComputedStyle(p.querySelector('.paperFx'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `opacity: ${s.opacity}`,
+        `background-image: ${s.backgroundImage}`,
+        `background-size: ${s.backgroundSize}`
+      ];
+    });
+  }
+});
+
+/* === 6 Glossy === */
+CARDS.push({
+  id:'gloss', title:'Glossy Highlight', key:'top sheen',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
+    p._inset=''; p._oblur=30; p._oalpha=.22; rebuildShadow(p);
+    p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
+    const fx=el('div'); fx.className='glossFx'; p.appendChild(fx);
+    function paint(){ Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',
+      background:`linear-gradient(${p._sheenAngle}deg, rgba(255,255,255,${p._sheenA}), rgba(255,255,255,0) ${p._sheenStop}%)`
+    }); }
+    p._sheenAngle=180; p._sheenStop=35; p._sheenA=.18; p._paint=paint; paint();
+  },
+  sliders:[
+    bgAlphaSlider(.12), ...baseBlurSat(12,120),
+    slider('Sheen α',0,.6,.01,.18,'',(p,v)=>{ p._sheenA=v; p._paint(); }),
+    slider('Sheen stop %',10,80,1,35,'%',(p,v)=>{ p._sheenStop=v; p._paint(); }),
+    slider('Sheen angle °',0,360,1,180,'deg',(p,v)=>{ p._sheenAngle=v; p._paint(); }),
+    borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(30,.22)
+  ],
+  buildCSS(p){
+    return buildOverlayCSS(p, 'before', (p) => {
+      const s = getComputedStyle(p.querySelector('.glossFx'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `background: ${s.backgroundImage || s.background}`
+      ];
+    });
+  }
+});
+
+/* === 7 Tinted === */
+CARDS.push({
+  id:'tint', title:'Tinted (HSLA)', key:'tint hue · alpha',
+  setup(p){
+    p._h=270; p._tinta=.18;
+    p.style.backgroundColor=`hsla(${p._h},70%,45%,${p._tinta})`;
+    setBlurSat(p,12,120);
+    p._inset=''; p._oblur=30; p._oalpha=.22; rebuildShadow(p);
+    p._bw=1; p._ba=.12; p.style.border='1px solid rgba(255,255,255,.12)';
+  },
+  sliders:[
+    ...baseBlurSat(12,120),
+    slider('Tint hue °',0,360,1,270,'deg',(p,v)=>{ p._h=v; p.style.backgroundColor=`hsla(${p._h},70%,45%,${p._tinta})`; }),
+    slider('Tint α',0,.6,.01,.18,'',(p,v)=>{ p._tinta=v; p.style.backgroundColor=`hsla(${p._h},70%,45%,${p._tinta})`; }),
+    borderWidthSlider(1), borderAlphaSlider(.12), ...outerShadowSliders(30,.22)
+  ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 8 Heavy Frost === */
+CARDS.push({
+  id:'frost', title:'Heavy Frost', key:'white frost',
+  setup(p){
+    p._fA=.16; p.style.backgroundColor=`rgba(255,255,255,${p._fA})`; setBlurSat(p,14,120);
+    p._inset=''; p._oblur=32; p._oalpha=.22; rebuildShadow(p);
+    p._bw=1; p._ba=.22; p.style.border='1px solid rgba(255,255,255,.22)';
+  },
+  sliders:[
+    ...baseBlurSat(14,120),
+    slider('Frost α',0,.6,.01,.16,'',(p,v)=>{ p._fA=v; p.style.backgroundColor=`rgba(255,255,255,${p._fA})`; }),
+    borderWidthSlider(1), borderAlphaSlider(.22), ...outerShadowSliders(32,.22)
+  ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 9 Inset Bevel === */
+CARDS.push({
+  id:'bevel', title:'Inset Bevel (4‑side)', key:'bevel px · light α · dark α',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.16)'; setBlurSat(p,12,118);
+    p._px=2; p._la=.35; p._da=.30;
+    p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`;
+    p._oblur=24; p._oalpha=.22; rebuildShadow(p);
+    p._bw=1; p._ba=.18; p.style.border='1px solid rgba(255,255,255,.18)';
+  },
+  sliders:[
+    bgAlphaSlider(.16), ...baseBlurSat(12,118),
+    slider('Bevel px',1,12,1,2,'px',(p,v)=>{ p._px=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
+    slider('Light α',.05,.8,.01,.35,'',(p,v)=>{ p._la=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
+    slider('Dark α',.05,.8,.01,.30,'',(p,v)=>{ p._da=v; p._inset = `inset 0 ${p._px}px 0 rgba(255,255,255,${p._la}), inset 0 -${p._px}px 0 rgba(0,0,0,${p._da}), inset ${p._px}px 0 0 rgba(0,0,0,${p._da}), inset -${p._px}px 0 0 rgba(255,255,255,${p._la})`; rebuildShadow(p); }),
+    ...outerShadowSliders(24,.22), borderWidthSlider(1), borderAlphaSlider(.18)
+  ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 10 Double Glass === */
+CARDS.push({
+  id:'double', title:'Double Glass', key:'outer rim · inner rim · alphas',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.14)'; setBlurSat(p,12,120);
+    p._outerPx=12; p._innerPx=2; p._r1=.20; p._r2=.45;
+    p._rims = ()=> `inset 0 0 0 ${p._outerPx}px rgba(255,255,255,${p._r1}), inset 0 0 0 ${p._innerPx}px rgba(255,255,255,${p._r2})`;
+    p._inset = p._rims();
+    p._oblur=26; p._oalpha=.22; rebuildShadow(p);
+    p._bw=0; p._ba=.12; p.style.border='0px solid rgba(255,255,255,.12)';
+  },
+  sliders:[
+    bgAlphaSlider(.14), ...baseBlurSat(12,120),
+    slider('Outer rim px',0,30,1,12,'px',(p,v)=>{ p._outerPx=v; p._inset = p._rims(); rebuildShadow(p); }),
+    slider('Outer α',0,.6,.01,.20,'',(p,v)=>{ p._r1=v; p._inset = p._rims(); rebuildShadow(p); }),
+    slider('Inner rim px',0,12,1,2,'px',(p,v)=>{ p._innerPx=v; p._inset = p._rims(); rebuildShadow(p); }),
+    slider('Inner α',0,.9,.01,.45,'',(p,v)=>{ p._r2=v; p._inset = p._rims(); rebuildShadow(p); }),
+    ...outerShadowSliders(26,.22), borderWidthSlider(0), borderAlphaSlider(.12)
+  ],
+  buildCSS: buildSimpleCSS
+});
+
+/* === 11 Neon Gradient Border === */
+CARDS.push({
+  id:'neon', title:'Neon Gradient Border', key:'gradient rim + glow',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.position='relative'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
+    p._bw=2; p._ba=0; p.style.border='2px solid transparent';
+    p._angle=135; p._glowBlur=14; p._glowA=.9;
+    p.style.backgroundImage='linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)';
+    p.style.backgroundOrigin='border-box'; p.style.backgroundClip='padding-box, border-box';
+    const glow=el('div'); glow.className='neonGlow'; Object.assign(glow.style,{
+      position:'absolute', inset:'-2px', borderRadius:'inherit', pointerEvents:'none',
+      background:'linear-gradient(135deg,#00ffd5,#7a5cff,#ff00e6)', filter:'blur(14px)', opacity:'0.9',
+      WebkitMask:'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+      WebkitMaskComposite:'xor', maskComposite:'exclude', padding:'2px'
+    }); p.appendChild(glow);
+  },
+  sliders:[
+    bgAlphaSlider(.12), ...baseBlurSat(12,120),
+    slider('Border width px',0,10,1,2,'px',(p,v)=>{ p._bw=v; p.style.borderWidth=v+'px'; const g=p.querySelector('.neonGlow'); g.style.inset = (-v)+'px'; g.style.padding = v+'px'; }),
+    slider('Glow blur px',0,60,1,14,'px',(p,v)=>{ p._glowBlur=v; p.querySelector('.neonGlow').style.filter=`blur(${v}px)`; }),
+    slider('Glow opacity',0,1,.01,.9,'',(p,v)=>{ p._glowA=v; p.querySelector('.neonGlow').style.opacity=String(v); }),
+    slider('Angle °',0,360,1,135,'deg',(p,v)=>{ p._angle=v; p.style.backgroundImage=`linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; p.querySelector('.neonGlow').style.background=`linear-gradient(${v}deg,#00ffd5,#7a5cff,#ff00e6)`; })
+  ],
+  buildCSS(p){
+    const mainCss = [];
+    writeBaseCSS(p,mainCss);
+    mainCss.push(`background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)), linear-gradient(${p._angle}deg,#00ffd5,#7a5cff,#ff00e6);`);
+    mainCss.push(`background-origin: border-box;`);
+    mainCss.push(`background-clip: padding-box, border-box;`);
+
+    const s = getComputedStyle(p.querySelector('.neonGlow'));
+    const pseudoCss = [
+      'content: ""',
+      'position: absolute',
+      `inset: -${p._bw}px`,
+      'pointer-events: none',
+      'border-radius: inherit',
+      `padding: ${p._bw}px`,
+      `opacity: ${p._glowA}`,
+      `background: ${s.background}`,
+      `filter: blur(${p._glowBlur}px)`,
+      '-webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+      '-webkit-mask-composite: xor',
+      'mask-composite: exclude'
+    ];
+
+    const finalCss = [
+      `.your-selector {`,
+      ...mainCss.map(line => `  ${line}`),
+      `}`,
+      ``,
+      `.your-selector::after {`,
+      ...pseudoCss.map(line => `  ${line}`),
+      `}`
+    ];
+    return finalCss.join('\n');
+  }
+});
+
+/* === 12 Duotone Prism Edge === */
+CARDS.push({
+  id:'duoprism', title:'Duotone Prism Edge', key:'two inner rims',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,125);
+    p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
+    p._oblur=26; p._oalpha=.20; rebuildShadow(p);
+    p._rimThk=2; p._cA=.55; p._mA=.55;
+    const rim=el('div'); rim.className='duoRim'; p.appendChild(rim);
+    function paint(){ rim.style.position='absolute'; rim.style.inset='0'; rim.style.pointerEvents='none'; rim.style.borderRadius='inherit';
+      rim.style.boxShadow=`inset 0 0 0 1px rgba(0,255,255,${p._cA}), inset 0 0 0 ${p._rimThk}px rgba(255,0,255,${p._mA})`; }
+    p._paintRim=paint; paint();
+  },
+  sliders:[
+    bgAlphaSlider(.12), ...baseBlurSat(12,125),
+    slider('Rim thickness px',1,10,1,2,'px',(p,v)=>{ p._rimThk=v; p._paintRim(); }),
+    slider('Cyan α',0,1,.01,.55,'',(p,v)=>{ p._cA=v; p._paintRim(); }),
+    slider('Magenta α',0,1,.01,.55,'',(p,v)=>{ p._mA=v; p._paintRim(); }),
+    ...outerShadowSliders(26,.20), borderWidthSlider(1), borderAlphaSlider(.10)
+  ],
+  buildCSS(p){
+    return buildOverlayCSS(p, 'after', (p) => {
+      const s = getComputedStyle(p.querySelector('.duoRim'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `box-shadow: ${s.boxShadow}`
+      ];
+    });
+  }
+});
+
+/* === 13 Ringed Glass === */
+CARDS.push({
+  id:'rings', title:'Ringed Glass', key:'repeating radial · opacity',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.14)'; setBlurSat(p,10,120);
+    p._bw=1; p._ba=.14; p.style.border='1px solid rgba(255,255,255,.14)';
+    const fx=el('div'); fx.className='ringsFx'; p.appendChild(fx);
+    function paint(){ Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
+      background:`repeating-radial-gradient(circle at ${p._cx}% ${p._cy}%, rgba(255,255,255,0.14), rgba(255,255,255,0.14) ${p._dot}px, transparent ${p._dot}px, transparent ${p._gap}px)`
+    }); }
+    p._cx=50;p._cy=50;p._dot=2;p._gap=10;p._op=.35; p._paint=paint; paint();
+  },
+  sliders:[
+    bgAlphaSlider(.14), ...baseBlurSat(10,120),
+    slider('Rings α',0,1,.01,.35,'',(p,v)=>{ p._op=v; p._paint(); }),
+    slider('Center X %',0,100,1,50,'%',(p,v)=>{ p._cx=v; p._paint(); }),
+    slider('Center Y %',0,100,1,50,'%',(p,v)=>{ p._cy=v; p._paint(); }),
+    slider('Dot px',1,8,1,2,'px',(p,v)=>{ p._dot=v; p._paint(); }),
+    slider('Gap px',6,30,1,10,'px',(p,v)=>{ p._gap=v; p._paint(); }),
+    borderWidthSlider(1), borderAlphaSlider(.14), ...outerShadowSliders(26,.22)
+  ],
+  buildCSS(p){
+    return buildOverlayCSS(p, 'after', (p) => {
+      const s = getComputedStyle(p.querySelector('.ringsFx'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `opacity: ${s.opacity}`,
+        `background: ${s.backgroundImage}`
+      ];
+    });
+  }
+});
+
+/* === 14 Micro‑scratches === */
+CARDS.push({
+  id:'scratch', title:'Micro‑scratches', key:'repeating linear · opacity',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.14)'; setBlurSat(p,10,120);
+    p._bw=1; p._ba=.14; p.style.border='1px solid rgba(255,255,255,.14)';
+    const fx=el('div'); fx.className='scratchFx'; p.appendChild(fx);
+    function paint(){ Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
+      background:`repeating-linear-gradient(${p._ang}deg, rgba(255,255,255,.5), rgba(255,255,255,.5) ${p._line}px, transparent ${p._line}px, transparent ${p._gap}px)`
+    }); }
+    p._ang=20;p._line=1;p._gap=6;p._op=.35; p._paint=paint; paint();
+  },
+  sliders:[
+    bgAlphaSlider(.14), ...baseBlurSat(10,120),
+    slider('Scratch α',0,1,.01,.35,'',(p,v)=>{ p._op=v; p._paint(); }),
+    slider('Angle °',0,180,1,20,'deg',(p,v)=>{ p._ang=v; p._paint(); }),
+    slider('Line px',1,4,1,1,'px',(p,v)=>{ p._line=v; p._paint(); }),
+    slider('Gap px',4,20,1,6,'px',(p,v)=>{ p._gap=v; p._paint(); }),
+    borderWidthSlider(1), borderAlphaSlider(.14), ...outerShadowSliders(26,.22)
+  ],
+  buildCSS(p){
+    return buildOverlayCSS(p, 'after', (p) => {
+      const s = getComputedStyle(p.querySelector('.scratchFx'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `opacity: ${s.opacity}`,
+        `background: ${s.backgroundImage}`
+      ];
+    });
+  }
+});
+
+/* === 15 Iridescent Film === */
+CARDS.push({
+  id:'film', title:'Iridescent Film', key:'linear overlay',
+  setup(p){
+    p._bgcol='13,14,35'; p.style.backgroundColor='rgba(13,14,35,0.12)'; setBlurSat(p,12,120);
+    p._bw=1; p._ba=.10; p.style.border='1px solid rgba(255,255,255,.10)';
+    const fx=el('div'); fx.className='filmFx'; p.appendChild(fx);
+    function paint(){ Object.assign(fx.style,{
+      position:'absolute',inset:'0',pointerEvents:'none',borderRadius:'inherit',opacity:String(p._op),
+      background:`linear-gradient(${p._ang}deg, rgba(255,0,153,.25), rgba(0,255,204,.25), rgba(0,128,255,.25))`
+    }); }
+    p._ang=130;p._op=.55; p._paint=paint; paint();
+  },
+  sliders:[
+    bgAlphaSlider(.12), ...baseBlurSat(12,120),
+    slider('Overlay α',0,1,.01,.55,'',(p,v)=>{ p._op=v; p._paint(); }),
+    slider('Angle °',0,360,1,130,'deg',(p,v)=>{ p._ang=v; p._paint(); }),
+    borderWidthSlider(1), borderAlphaSlider(.10), ...outerShadowSliders(28,.22)
+  ],
+  buildCSS(p){
+    return buildOverlayCSS(p, 'after', (p) => {
+      const s = getComputedStyle(p.querySelector('.filmFx'));
+      return [
+        'content: ""',
+        'position: absolute',
+        'inset: 0',
+        'pointer-events: none',
+        'border-radius: inherit',
+        `opacity: ${s.opacity}`,
+        `background: ${s.backgroundImage}`
+      ];
+    });
+  }
+});
+
+/* ---------- Render ---------- */
+function makeCard(def){
+  const card = el('section','card glass-'+def.id);
+  const bar = el('div','bar'); bar.textContent = def.title;
+  const sub = el('div','sub'); sub.innerHTML = '<b>Key:</b> '+def.key;
+  const prev = el('div','preview');
+  const controls = el('div','controls');
+  const code = el('pre','code'); code.textContent = '';
+  const btnWrap = el('div','btns');
+  const copyBtn = el('button','btn'); copyBtn.textContent='Copy CSS';
+  const refreshBtn = el('button','btn'); refreshBtn.textContent='Refresh CSS';
+  card.append(bar, sub, prev, controls, code, btnWrap);
+  btnWrap.append(copyBtn, refreshBtn);
+  try{
+    def.setup(prev);
+    def.sliders.forEach(s => {
+      const row = el('div','ctl');
+      const lab = el('label'); lab.textContent = s.label;
+      const rng = el('input'); rng.type='range'; rng.min=s.min; rng.max=s.max; rng.step=s.step; rng.value=s.value;
+      const read = el('div'); read.style.fontSize='12px'; read.style.color='var(--muted)';
+      read.textContent = s.unit ? `${s.value}${s.unit}` : `${s.value}`;
+      rng.addEventListener('input', () => {
+        const v = (s.step%1===0)? parseInt(rng.value,10): parseFloat(rng.value);
+        s.apply(prev, v);
+        read.textContent = s.unit ? `${v}${s.unit}` : `${v}`;
+        try{ code.textContent = def.buildCSS(prev); }catch(e){ code.textContent = '/* build error: '+e.message+' */'; }
+      });
+      // initial apply
+      s.apply(prev, s.value);
+      row.append(lab, rng); row.appendChild(read);
+      controls.appendChild(row);
+    });
+    try{ code.textContent = def.buildCSS(prev); }catch(e){ code.textContent = '/* build error: '+e.message+' */'; }
+    copyBtn.addEventListener('click', ()=> copyText(code.textContent, copyBtn));
+    refreshBtn.addEventListener('click', ()=> { try{ code.textContent = def.buildCSS(prev); }catch(e){ code.textContent = '/* build error: '+e.message+' */'; } });
+  }catch(e){
+    const err = el('div','err'); err.textContent = 'Error: '+e.message;
+    controls.innerHTML=''; controls.appendChild(err);
+  }
+  return card;
+}
+
+const grid = $('#grid');
+for(const def of CARDS){ grid.appendChild(makeCard(def)); }
+</script>
+</body>
+</html>
